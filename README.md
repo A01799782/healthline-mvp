@@ -21,3 +21,4 @@ Usa un offset en minutos: `HEALTHLINE_TIME_OFFSET_MINUTES=60 python3 app.py` sim
 ## Notas de borrado
 Al eliminar un paciente se eliminan también sus medicamentos y tomas asociadas (sin huérfanos).
 # healthline-mvp
+# healthline-mvp
