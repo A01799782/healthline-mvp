@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Dashboard de adherencia (7 días)</h2>
+<div class="card">
+    <table>
+        <tr>
+            <th>Paciente</th>
+            <th>Vencidas</th>
+            <th>% Adherencia</th>
+            <th>Tomadas</th>
+            <th>Omitidas</th>
+            <th>Caídas 90d</th>
+        </tr>
+        {% for row in rows %}
+        <tr>
+            <td><a href="{{ url_for('patient_detail', patient_id=row.patient.id) }}">{{ row.patient.name }}</a></td>
+            <td>{{ row.overdue }}</td>
+            <td>{% if row.adherence_percent is not none %}{{ row.adherence_percent }}%{% else %}—{% endif %}</td>
+            <td>{{ row.taken }}</td>
+            <td>{{ row.skipped }}</td>
+            <td>{{ row.falls }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="muted">Sin datos.</td></tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}

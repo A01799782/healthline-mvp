@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="{{ url_for('patient_detail', patient_id=patient.id) }}">&larr; Volver</a>
+<div class="card" style="margin-top:12px;">
+    <h2>Reportar caída - {{ patient.name }}</h2>
+    {% if error %}<div style="color:#c62828;">{{ error }}</div>{% endif %}
+    <form method="post">
+        <label>Fecha y hora</label>
+        <input type="datetime-local" name="occurred_at" value="{{ default_dt }}" required>
+        <label>Lugar</label>
+        <select name="location" required>
+            <option value="">Selecciona</option>
+            {% set options = ["Baño", "Cocina", "Escaleras", "Pasillo", "Exterior", "Otro"] %}
+            {% for opt in options %}
+            <option value="{{ opt }}">{{ opt }}</option>
+            {% endfor %}
+        </select>
+        <label>Nota (opcional)</label>
+        <textarea name="note" rows="3" placeholder="Contexto, lesiones, acciones tomadas"></textarea>
+        <button type="submit">Guardar</button>
+    </form>
+</div>
+{% endblock %}

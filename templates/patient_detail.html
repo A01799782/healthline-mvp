@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="{{ url_for('patient_list') }}">&larr; Volver</a>
+<div style="display:flex;align-items:center;gap:12px;">
+    <h2 style="margin:0;">{{ patient.name }}</h2>
+    <a href="{{ url_for('patient_edit', patient_id=patient.id) }}" style="text-decoration:none;">
+        <button type="button">Editar</button>
+    </a>
+    <a href="{{ url_for('patient_today', patient_id=patient.id) }}" style="text-decoration:none;">
+        <button type="button" style="background:#0d47a1;">Agenda de hoy</button>
+    </a>
+    <form method="post" action="{{ url_for('patient_delete', patient_id=patient.id) }}" onsubmit="return confirm('¿Eliminar paciente y todos sus registros?');">
+        <button type="submit" style="background:#c62828;">Eliminar paciente</button>
+    </form>
+</div>
+{% if patient.notes %}<div class="muted">{{ patient.notes }}</div>{% endif %}
+{% if msg %}
+<div class="card" style="background:#e8f5e9;color:#2e7d32;margin-top:8px;">{{ msg }}</div>
+{% endif %}
+
+<div class="card" style="margin-top:12px;">
+    <h3>Perfil del paciente</h3>
+    <table>
+        <tr><th>Edad</th><td>{% if age is not none %}{{ age }} años{% else %}—{% endif %}</td></tr>
+        <tr><th>Fecha de nacimiento</th><td>{{ patient.date_of_birth or "—" }}</td></tr>
+        <tr><th>Diagnóstico</th><td>{{ patient.diagnosis or "—" }}</td></tr>
+        <tr><th>Alergias</th><td>{{ patient.allergies or "—" }}</td></tr>
+        <tr><th>Contacto de emergencia</th><td>{{ patient.emergency_contact_name or "—" }}</td></tr>
+        <tr><th>Teléfono emergencia</th><td>{{ patient.emergency_contact_phone or "—" }}</td></tr>
+        <tr><th>Relación</th><td>{{ patient.emergency_contact_relation or "—" }}</td></tr>
+    </table>
+</div>
+
+<div class="card" style="margin-top:12px;">
+    <h3>Eventualidades</h3>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div>Caídas últimos 90 días: <strong>{{ fall_count }}</strong></div>
+        <a href="{{ url_for('fall_new', patient_id=patient.id) }}"><button type="button">Reportar caída</button></a>
+        <a href="{{ url_for('falls_list', patient_id=patient.id) }}">Ver historial de caídas</a>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Adherencia</h3>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        <div>
+            <strong>Hoy</strong><br>
+            Tomadas (vencidas): {{ adherence_today.taken_due }}<br>
+            Omitidas (vencidas): {{ adherence_today.skipped_due }}<br>
+            Vencidas pendientes: {{ adherence_today.overdue_due }}<br>
+            Pendientes futuras: {{ adherence_today.pending_future }}
+        </div>
+        <div>
+            <strong>Últimos 7 días</strong><br>
+            Tomadas (vencidas): {{ adherence_7d.taken_due }}<br>
+            Omitidas (vencidas): {{ adherence_7d.skipped_due }}<br>
+            Vencidas pendientes: {{ adherence_7d.overdue_due }}<br>
+            Pendientes futuras: {{ adherence_7d.pending_future }}<br>
+            % Adherencia (dosis vencidas incluidas): {% if adherence_pct_7d is not none %}{{ adherence_pct_7d }}%{% else %}—{% endif %}
+        </div>
+        <div>
+            <strong>Últimos 30 días</strong><br>
+            Tomadas (vencidas): {{ adherence_30d.taken_due }}<br>
+            Omitidas (vencidas): {{ adherence_30d.skipped_due }}<br>
+            Vencidas pendientes: {{ adherence_30d.overdue_due }}<br>
+            Pendientes futuras: {{ adherence_30d.pending_future }}<br>
+            % Adherencia (dosis vencidas incluidas): {% if adherence_pct_30d is not none %}{{ adherence_pct_30d }}%{% else %}—{% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row" style="margin-top:12px;">
+    <div class="col">
+        <h3>Medicamentos</h3>
+        {% for med, events in meds_with_events %}
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div><strong>{{ med.name }}</strong> <span class="pill">{{ med.dose }}</span></div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <form method="post" action="{{ url_for('medication_toggle_active', med_id=med.id) }}">
+                        {% if med.active %}
+                        <button type="submit" style="background:#f9a825;">Pausar</button>
+                        {% else %}
+                        <button type="submit" style="background:#2e7d32;">Reanudar</button>
+                        {% endif %}
+                    </form>
+                    <a href="{{ url_for('medication_edit', med_id=med.id) }}">
+                        <button type="button">Editar</button>
+                    </a>
+                    {% if med.ended %}
+                        <span class="pill" style="background:#fce4ec;color:#c2185b;">Terminado</span>
+                    {% elif not med.active %}
+                        <span class="pill" style="background:#fff3e0;color:#ef6c00;">Pausado</span>
+                    {% else %}
+                        <span class="pill" style="background:#e8f5e9;color:#2e7d32;">Activo</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="muted">
+                Cada {{ med.frequency_hours }} horas{% if med.notes %} · {{ med.notes }}{% endif %}
+                {% if med.start_time %} · Inicio: {{ fmt_dt(med.start_time) }}{% endif %}
+                {% if med.end_time %} · Fin: {{ fmt_dt(med.end_time) }}{% endif %}
+            </div>
+            <div style="margin-top:8px;">
+                <strong>Próximas tomas</strong>
+                <table>
+                    <tr><th>Horario</th><th>Estado</th><th>Acción</th></tr>
+                    {% for ev in events %}
+                    <tr>
+                        <td>{{ fmt_dt(ev.scheduled_time) }}</td>
+                        <td>{% if ev.taken %}Realizada{% else %}Pendiente{% endif %}</td>
+                        <td>
+                            {% if not ev.taken %}
+                            <form method="post" action="{{ url_for('take_dose', event_id=ev.id) }}">
+                                <button type="submit">Marcar</button>
+                            </form>
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="3" class="muted">Sin registros aún.</td></tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">Aún no hay medicamentos.</div>
+        {% endfor %}
+    </div>
+    <div class="col">
+        <div class="card">
+            <h3>Agregar medicamento</h3>
+            <form method="post" action="{{ url_for('medication_new') }}">
+                <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                <label>Nombre</label>
+                <input type="text" name="name" required>
+                <label>Dosis</label>
+                <input type="text" name="dose" placeholder="Ej. 500mg" required>
+                <label>Frecuencia (horas)</label>
+                <input type="number" name="frequency_hours" min="1" required>
+                <label>Hora inicial</label>
+                <input type="datetime-local" name="start_time">
+                <label>Fecha/hora fin (opcional)</label>
+                <input type="datetime-local" name="end_time">
+                <label>Notas</label>
+                <textarea name="notes" rows="3" placeholder="Instrucciones adicionales (opcional)"></textarea>
+                <button type="submit">Guardar</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

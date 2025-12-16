@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="{{ url_for('patient_detail', patient_id=patient.id) }}">&larr; Volver</a>
+<div class="card" style="margin-top:12px;">
+    <h2>Editar paciente</h2>
+    {% if error %}<div style="color:#c62828;">{{ error }}</div>{% endif %}
+    <form method="post">
+        <label>Nombre</label>
+        <input type="text" name="name" value="{{ patient.name }}" required>
+        <label>Fecha de nacimiento</label>
+        <input type="date" name="date_of_birth" value="{{ patient.date_of_birth }}">
+        <label>Diagnóstico</label>
+        <input type="text" name="diagnosis" value="{{ patient.diagnosis }}">
+        <label>Alergias</label>
+        <input type="text" name="allergies" value="{{ patient.allergies }}">
+        <label>Contacto de emergencia - Nombre</label>
+        <input type="text" name="emergency_contact_name" value="{{ patient.emergency_contact_name }}">
+        <label>Contacto de emergencia - Teléfono</label>
+        <input type="text" name="emergency_contact_phone" value="{{ patient.emergency_contact_phone }}">
+        <label>Contacto de emergencia - Relación</label>
+        <input type="text" name="emergency_contact_relation" value="{{ patient.emergency_contact_relation }}">
+        <label>Notas</label>
+        <textarea name="notes" rows="3" placeholder="Notas (opcional)">{{ patient.notes }}</textarea>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button type="submit">Guardar</button>
+            <a href="{{ url_for('patient_detail', patient_id=patient.id) }}">
+                <button type="button" style="background:#757575;">Cancelar</button>
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

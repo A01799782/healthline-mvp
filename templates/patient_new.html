@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <h2>Nuevo paciente</h2>
+    <form method="post">
+        <label>Nombre</label>
+        <input type="text" name="name" required>
+        <label>Fecha de nacimiento</label>
+        <input type="date" name="date_of_birth">
+        <label>Diagnóstico</label>
+        <input type="text" name="diagnosis" placeholder="Diagnóstico principal">
+        <label>Alergias</label>
+        <input type="text" name="allergies" placeholder="Alergias conocidas">
+        <label>Contacto de emergencia - Nombre</label>
+        <input type="text" name="emergency_contact_name">
+        <label>Contacto de emergencia - Teléfono</label>
+        <input type="text" name="emergency_contact_phone">
+        <label>Contacto de emergencia - Relación</label>
+        <input type="text" name="emergency_contact_relation">
+        <label>Notas</label>
+        <textarea name="notes" rows="3" placeholder="Condiciones, contactos, etc. (opcional)"></textarea>
+        <button type="submit">Guardar</button>
+    </form>
+</div>
+{% endblock %}

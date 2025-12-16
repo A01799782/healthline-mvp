@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="{{ url_for('patient_detail', patient_id=patient.id) }}">&larr; Volver</a>
+<div class="card" style="margin-top:12px;">
+    <h2>Agenda de hoy - {{ patient.name }}</h2>
+    {% if grouped_events|length == 0 %}
+        <div class="muted">Sin eventos para hoy.</div>
+    {% else %}
+        {% for group in grouped_events %}
+            <div style="margin-bottom:12px;">
+                <div class="pill" style="background:#eceff1;color:#37474f;">{{ group.hour }}</div>
+                <table style="margin-top:8px;">
+                    <tr>
+                        <th>Hora</th>
+                        <th>Medicamento</th>
+                        <th>Dosis</th>
+                        <th>Estado</th>
+                        <th>Nota</th>
+                        <th>Acción</th>
+                    </tr>
+                    {% for ev in group.events %}
+                    <tr>
+                        <td>{{ fmt_dt(ev.scheduled_time) }}</td>
+                        <td>{{ ev.medication_name }}</td>
+                        <td>{{ ev.medication_dose }}</td>
+                        <td>
+                            {% if ev.status == 'Omitida' %}
+                                <span class="pill" style="background:#ffe0b2;color:#e65100;">Omitida</span>
+                            {% elif ev.status == 'Vencida' %}
+                                <span class="pill" style="background:#ffebee;color:#c62828;">Vencida</span>
+                            {% elif ev.status == 'Próxima' %}
+                                <span class="pill" style="background:#e3f2fd;color:#0d47a1;">Próxima</span>
+                            {% else %}
+                                <span class="pill" style="background:#e8f5e9;color:#2e7d32;">Tomada</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ ev.note or "—" }}</td>
+                        <td>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                                {% if ev.status in ['Tomada', 'Omitida'] %}
+                                    <form method="post" action="{{ url_for('undo_dose', event_id=ev.id) }}">
+                                        <button type="submit">Deshacer</button>
+                                    </form>
+                                {% else %}
+                                    <form method="post" action="{{ url_for('take_dose', event_id=ev.id) }}">
+                                        <button type="submit">Marcar tomada</button>
+                                    </form>
+                                    <form method="post" action="{{ url_for('skip_dose', event_id=ev.id) }}">
+                                        <button type="submit" style="background:#f9a825;">Omitir</button>
+                                    </form>
+                                {% endif %}
+                                <form method="post" action="{{ url_for('note_dose', event_id=ev.id) }}">
+                                    <input type="text" name="note" value="{{ ev.note }}" placeholder="Nota" style="max-width:140px;">
+                                    <button type="submit" style="background:#757575;">Guardar nota</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}

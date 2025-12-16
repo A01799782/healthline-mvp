@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+healthline.db
+.env
+.DS_Store
+
+
+

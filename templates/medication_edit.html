@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="{{ url_for('patient_detail', patient_id=patient_id) }}">&larr; Volver</a>
+<div class="card" style="margin-top:12px;">
+    <h2>Editar medicamento</h2>
+    {% if error %}<div style="color:#c62828;">{{ error }}</div>{% endif %}
+    <form method="post">
+        <label>Nombre</label>
+        <input type="text" name="name" value="{{ med.name }}" required>
+        <label>Dosis</label>
+        <input type="text" name="dose" value="{{ med.dose }}" required>
+        <label>Frecuencia (horas)</label>
+        <input type="number" name="frequency_hours" min="1" value="{{ med.frequency_hours }}" required>
+        <label>Hora inicial</label>
+        <input type="datetime-local" name="start_time" value="{{ med.start_time[:16] if med.start_time }}">
+        <label>Fecha/hora fin (opcional)</label>
+        <input type="datetime-local" name="end_time" value="{{ med.end_time[:16] if med.end_time }}">
+        <label>Notas</label>
+        <textarea name="notes" rows="3" placeholder="Instrucciones adicionales (opcional)">{{ med.notes }}</textarea>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <button type="submit">Guardar</button>
+            <a href="{{ url_for('patient_detail', patient_id=patient_id) }}">
+                <button type="button" style="background:#757575;">Cancelar</button>
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

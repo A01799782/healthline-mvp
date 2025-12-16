@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+    <div class="col">
+        <h2>Pacientes</h2>
+        {% if msg %}
+        <div class="card" style="background:#e8f5e9;color:#2e7d32;">{{ msg }}</div>
+        {% endif %}
+        {% for p in patients %}
+        <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div>
+                        <strong>{{ p.name }}</strong>
+                        {% set falls = fall_counts.get(p.id, 0) %}
+                        {% if falls == 1 %} 🟡{% elif falls == 2 %} 🔴{% elif falls >=3 %} ⚫{% endif %}
+                    </div>
+                    {% if p.notes %}<div class="muted">{{ p.notes }}</div>{% endif %}
+                    <div style="margin-top:8px;">
+                        <a href="{{ url_for('patient_detail', patient_id=p.id) }}">Ver detalle</a>
+                    </div>
+                </div>
+                <form method="post" action="{{ url_for('patient_delete', patient_id=p.id) }}" onsubmit="return confirm('¿Eliminar paciente y todos sus registros?');">
+                    <button type="submit" style="background:#c62828;">Eliminar</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="card">No hay pacientes registrados.</div>
+        {% endfor %}
+    </div>
+    <div class="col">
+        <div class="card">
+            <h3>Agregar paciente</h3>
+            <form method="post" action="{{ url_for('patient_new') }}">
+                <label>Nombre</label>
+                <input type="text" name="name" required>
+                <label>Notas</label>
+                <textarea name="notes" rows="3" placeholder="Condiciones, contactos, etc. (opcional)"></textarea>
+                <button type="submit">Guardar</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

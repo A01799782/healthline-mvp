@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Próximas tomas</h2>
+<div class="card" style="margin-bottom:12px;">
+    <form method="get" action="{{ url_for('alerts') }}" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+        <div style="flex:1;min-width:240px;">
+            <label for="patient_name">Paciente</label>
+            <input type="text" name="patient_name" id="patient_name" list="patient-list" value="{{ patient_name }}">
+            <datalist id="patient-list">
+                {% for name in patient_names %}
+                <option value="{{ name }}"></option>
+                {% endfor %}
+            </datalist>
+        </div>
+        <div style="display:flex;gap:8px;">
+            <button type="submit">Filtrar</button>
+            <a href="{{ url_for('alerts') }}"><button type="button" style="background:#757575;">Limpiar</button></a>
+        </div>
+    </form>
+</div>
+<div class="card">
+    <table>
+        <tr>
+            <th>Paciente</th>
+            <th>Medicamento</th>
+            <th>Dosis</th>
+            <th>Horario</th>
+            <th>Estado</th>
+            <th>Nota</th>
+            <th>Acción</th>
+        </tr>
+        {% for ev in events %}
+        <tr>
+            <td>{{ ev.patient_name }}</td>
+            <td>{{ ev.medication_name }}</td>
+            <td>{{ ev.medication_dose }}</td>
+            <td>{{ fmt_dt(ev.scheduled_time) }}</td>
+            <td>
+                {% if ev.status == 'Omitida' %}
+                    <span class="pill" style="background:#ffe0b2;color:#e65100;">Omitida</span>
+                {% elif ev.status == 'Vencida' %}
+                    <span class="pill" style="background:#ffebee;color:#c62828;">Vencida</span>
+                {% elif ev.status == 'Próxima' %}
+                    <span class="pill" style="background:#e3f2fd;color:#0d47a1;">Próxima</span>
+                {% else %}
+                    <span class="pill" style="background:#e8f5e9;color:#2e7d32;">Tomada</span>
+                {% endif %}
+            </td>
+            <td>{{ ev.note or "—" }}</td>
+            <td>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                    {% if ev.status in ['Tomada', 'Omitida'] %}
+                        <form method="post" action="{{ url_for('undo_dose', event_id=ev.id) }}">
+                            <button type="submit">Deshacer</button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="{{ url_for('take_dose', event_id=ev.id) }}">
+                            <button type="submit">Marcar tomada</button>
+                        </form>
+                        <form method="post" action="{{ url_for('skip_dose', event_id=ev.id) }}">
+                            <button type="submit" style="background:#f9a825;">Omitir</button>
+                        </form>
+                    {% endif %}
+                    <form method="post" action="{{ url_for('note_dose', event_id=ev.id) }}">
+                        <input type="text" name="note" value="{{ ev.note }}" placeholder="Nota" style="max-width:140px;">
+                        <button type="submit" style="background:#757575;">Guardar nota</button>
+                    </form>
+                </div>
+            </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="muted">No hay tomas próximas.</td></tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}
