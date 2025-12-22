@@ -1,5 +1,25 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  .adherence-grid {
+    display: inline-grid;
+    grid-template-columns: auto auto;
+    row-gap: 4px;
+    column-gap: 12px;
+  }
+  .adherence-pct { margin-top: 8px; font-weight: 600; }
+  .adherence-grid div:nth-child(2n) {
+    text-align: right;
+    font-weight: 600;
+    justify-self: end;
+  }
+  .adherence-pct-row{
+    display:flex;
+    gap:8px;
+    margin-top:8px;
+  }
+</style>
+
 <a href="{{ url_for('patient_list') }}">&larr; Volver</a>
 <div style="display:flex;align-items:center;gap:12px;">
     <h2 style="margin:0;">{{ patient.name }}</h2>
@@ -39,32 +59,42 @@
         <a href="{{ url_for('falls_list', patient_id=patient.id) }}">Ver historial de caídas</a>
     </div>
 </div>
-
+<!-- DO NOT EDIT: Adherencia copy/rows are final. No agregar "(vencidas)" ni filas "Futuras" en 7d/30d. -->
 <div class="card">
     <h3>Adherencia</h3>
     <div style="display:flex;gap:16px;flex-wrap:wrap;">
-        <div>
-            <strong>Hoy</strong><br>
-            Tomadas (vencidas): {{ adherence_today.taken_due }}<br>
-            Omitidas (vencidas): {{ adherence_today.skipped_due }}<br>
-            Vencidas pendientes: {{ adherence_today.overdue_due }}<br>
-            Pendientes futuras: {{ adherence_today.pending_future }}
+        <div style="flex:1;min-width:220px;">
+            <div style="font-weight:bold;margin-bottom:8px;">Hoy</div>
+            <div class="adherence-grid">
+                <div>Tomadas</div><div>{{ adherence_today.taken_due }}</div>
+                <div>Omitidas</div><div>{{ adherence_today.skipped_due }}</div>
+                <div>Vencidas</div><div>{{ adherence_today.overdue_due }}</div>
+                <div>Futuras</div><div>{{ adherence_today.pending_future }}</div>
+            </div>
         </div>
-        <div>
-            <strong>Últimos 7 días</strong><br>
-            Tomadas (vencidas): {{ adherence_7d.taken_due }}<br>
-            Omitidas (vencidas): {{ adherence_7d.skipped_due }}<br>
-            Vencidas pendientes: {{ adherence_7d.overdue_due }}<br>
-            Pendientes futuras: {{ adherence_7d.pending_future }}<br>
-            % Adherencia (dosis vencidas incluidas): {% if adherence_pct_7d is not none %}{{ adherence_pct_7d }}%{% else %}—{% endif %}
+        <div style="flex:1;min-width:220px;">
+            <div style="font-weight:bold;margin-bottom:8px;">Últimos 7 días</div>
+            <div class="adherence-grid">
+                <div>Tomadas</div><div>{{ adherence_7d.taken_due }}</div>
+                <div>Omitidas</div><div>{{ adherence_7d.skipped_due }}</div>
+                <div>Vencidas</div><div>{{ adherence_7d.overdue_due }}</div>
+            </div>
+            <div class="adherence-pct-row">
+              <span>% Adherencia</span>
+              <strong>{% if adherence_pct_7d is not none %}{{ adherence_pct_7d }}%{% else %}—{% endif %}</strong>
+            </div>
         </div>
-        <div>
-            <strong>Últimos 30 días</strong><br>
-            Tomadas (vencidas): {{ adherence_30d.taken_due }}<br>
-            Omitidas (vencidas): {{ adherence_30d.skipped_due }}<br>
-            Vencidas pendientes: {{ adherence_30d.overdue_due }}<br>
-            Pendientes futuras: {{ adherence_30d.pending_future }}<br>
-            % Adherencia (dosis vencidas incluidas): {% if adherence_pct_30d is not none %}{{ adherence_pct_30d }}%{% else %}—{% endif %}
+        <div style="flex:1;min-width:220px;">
+            <div style="font-weight:bold;margin-bottom:8px;">Últimos 30 días</div>
+            <div class="adherence-grid">
+                <div>Tomadas</div><div>{{ adherence_30d.taken_due }}</div>
+                <div>Omitidas</div><div>{{ adherence_30d.skipped_due }}</div>
+                <div>Vencidas</div><div>{{ adherence_30d.overdue_due }}</div>
+            </div>
+            <div class="adherence-pct-row">
+              <span>% Adherencia</span>
+              <strong>{% if adherence_pct_30d is not none %}{{ adherence_pct_30d }}%{% else %}—{% endif %}</strong>
+            </div>
         </div>
     </div>
 </div>
