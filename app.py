@@ -2,6 +2,8 @@ from datetime import datetime, timedelta
 from flask import Flask, redirect, render_template, request, url_for
 
 import db
+from services.dose_status import compute_event_status
+from authz import CARE_ADMIN, NURSE, get_current_role, require_roles
 
 app = Flask(__name__)
 
@@ -31,6 +33,7 @@ def patient_list():
 
 
 @app.route("/patients/new", methods=["GET", "POST"])
+@require_roles(CARE_ADMIN, NURSE)
 def patient_new():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
@@ -42,7 +45,7 @@ def patient_new():
         ec_phone = request.form.get("emergency_contact_phone", "").strip() or None
         ec_relation = request.form.get("emergency_contact_relation", "").strip() or None
         if name:
-            db.add_patient(
+            pid = db.add_patient(
                 name,
                 notes,
                 date_of_birth=dob,
@@ -51,6 +54,13 @@ def patient_new():
                 emergency_contact_name=ec_name,
                 emergency_contact_phone=ec_phone,
                 emergency_contact_relation=ec_relation,
+            )
+            db.log_audit(
+                "create_patient",
+                "patient",
+                pid,
+                get_current_role(request),
+                {"notes": bool(notes)},
             )
             return redirect(url_for("patient_list"))
     return render_template("patient_new.html")
@@ -79,7 +89,6 @@ def patient_detail(patient_id: int):
     meds = db.list_medications_for_patient(patient_id)
     meds_with_events = []
     for m in meds:
-        db.ensure_next_dose_event(m["id"])
         events = db.list_dose_events_for_medication(m["id"], limit=5)
         med_copy = dict(m)
         end_raw = med_copy.get("end_time")
@@ -107,6 +116,7 @@ def patient_detail(patient_id: int):
 
 
 @app.route("/medications/new", methods=["POST"])
+@require_roles(CARE_ADMIN, NURSE)
 def medication_new():
     patient_id = int(request.form.get("patient_id"))
     name = request.form.get("name", "").strip()
@@ -134,7 +144,14 @@ def medication_new():
             end_time = datetime.fromisoformat(end_time_raw)
         except ValueError:
             end_time = None
-    db.add_medication(patient_id, name, dose, frequency_hours, notes, start_time, end_time=end_time)
+    med_id = db.add_medication(patient_id, name, dose, frequency_hours, notes, start_time, end_time=end_time)
+    db.log_audit(
+        "create_medication",
+        "medication",
+        med_id,
+        get_current_role(request),
+        {"patient_id": patient_id, "frequency_hours": frequency_hours, "has_end_time": bool(end_time)},
+    )
     return redirect(url_for("patient_detail", patient_id=patient_id))
 
 
@@ -142,31 +159,13 @@ def medication_new():
 def alerts():
     patient_name = request.args.get("patient_name", "").strip()
     events = db.list_upcoming_dose_events(patient_name=patient_name if patient_name else None)
-    for ev in events:
-        db.ensure_next_dose_event(ev["medication_id"])
-    events = db.list_upcoming_dose_events(patient_name=patient_name if patient_name else None)
-    enriched = []
     current_time = db.now()
+    enriched = []
     for ev in events:
-        try:
-            sched = datetime.fromisoformat(ev["scheduled_time"])
-        except Exception:
-            sched = current_time
-        if ev.get("skipped"):
-            status = "Omitida"
-            order_bucket = 2
-        elif ev.get("taken"):
-            status = "Tomada"
-            order_bucket = 2
-        elif sched < current_time:
-            status = "Vencida"
-            order_bucket = 0
-        else:
-            status = "Próxima"
-            order_bucket = 1
-        ev["status"] = status
-        ev["_order_bucket"] = order_bucket
-        ev["_order_time"] = sched
+        status_data = compute_event_status(ev, current_time)
+        ev["status"] = status_data["status"]
+        ev["_order_bucket"] = status_data["order_bucket"]
+        ev["_order_time"] = status_data["sched_dt"]
         enriched.append(ev)
     enriched.sort(key=lambda e: (e["_order_bucket"], e["_order_time"]))
     patient_names = db.get_patient_names()
@@ -184,26 +183,11 @@ def patient_today(patient_id: int):
     events = db.list_patient_events_for_day(patient_id, day_start.isoformat(), day_end.isoformat())
     enriched = []
     for ev in events:
-        try:
-            sched = datetime.fromisoformat(ev["scheduled_time"])
-        except Exception:
-            sched = current
-        if ev.get("skipped"):
-            status = "Omitida"
-            order_bucket = 2
-        elif ev.get("taken"):
-            status = "Tomada"
-            order_bucket = 2
-        elif sched < current:
-            status = "Vencida"
-            order_bucket = 0
-        else:
-            status = "Próxima"
-            order_bucket = 1
-        ev["status"] = status
-        ev["_order_bucket"] = order_bucket
-        ev["_order_time"] = sched
-        ev["_hour_label"] = sched.strftime("%H:00")
+        status_data = compute_event_status(ev, current)
+        ev["status"] = status_data["status"]
+        ev["_order_bucket"] = status_data["order_bucket"]
+        ev["_order_time"] = status_data["sched_dt"]
+        ev["_hour_label"] = status_data["hour_label"]
         enriched.append(ev)
     enriched.sort(key=lambda e: (e["_order_bucket"], e["_order_time"]))
     # group by hour label preserving order
@@ -222,27 +206,35 @@ def patient_today(patient_id: int):
 
 
 @app.route("/dose_events/<int:event_id>/take", methods=["POST"])
+@require_roles(CARE_ADMIN, NURSE)
 def take_dose(event_id: int):
     db.mark_dose_taken(event_id)
+    db.log_audit("take_dose", "dose_event", event_id, get_current_role(request), None)
     return redirect(request.referrer or url_for("alerts"))
 
 
 @app.route("/dose_events/<int:event_id>/skip", methods=["POST"])
+@require_roles(CARE_ADMIN, NURSE)
 def skip_dose(event_id: int):
     db.mark_dose_skipped(event_id)
+    db.log_audit("skip_dose", "dose_event", event_id, get_current_role(request), None)
     return redirect(request.referrer or url_for("alerts"))
 
 
 @app.route("/dose_events/<int:event_id>/undo", methods=["POST"])
+@require_roles(CARE_ADMIN, NURSE)
 def undo_dose(event_id: int):
     db.undo_dose_event(event_id)
+    db.log_audit("undo_dose", "dose_event", event_id, get_current_role(request), None)
     return redirect(request.referrer or url_for("alerts"))
 
 
 @app.route("/dose_events/<int:event_id>/note", methods=["POST"])
+@require_roles(CARE_ADMIN, NURSE)
 def note_dose(event_id: int):
     note = request.form.get("note", "").strip() or None
     db.save_dose_note(event_id, note)
+    db.log_audit("note_dose", "dose_event", event_id, get_current_role(request), {"note_len": len(note) if note else 0})
     return redirect(request.referrer or url_for("alerts"))
 
 
@@ -292,12 +284,15 @@ def dev_overdue(patient_id: int):
 
 
 @app.route("/patients/<int:patient_id>/delete", methods=["POST"])
+@require_roles(CARE_ADMIN)
 def patient_delete(patient_id: int):
     db.delete_patient(patient_id)
+    db.log_audit("delete_patient", "patient", patient_id, get_current_role(request), None)
     return redirect(url_for("patient_list"))
 
 
 @app.route("/patients/<int:patient_id>/edit", methods=["GET", "POST"])
+@require_roles(CARE_ADMIN, NURSE)
 def patient_edit(patient_id: int):
     patient = db.get_patient(patient_id)
     if not patient:
@@ -324,11 +319,13 @@ def patient_edit(patient_id: int):
             emergency_contact_phone=ec_phone,
             emergency_contact_relation=ec_relation,
         )
+        db.log_audit("update_patient", "patient", patient_id, get_current_role(request), {"has_notes": bool(notes)})
         return redirect(url_for("patient_detail", patient_id=patient_id))
     return render_template("patient_edit.html", patient=patient, error=None)
 
 
 @app.route("/patients/<int:patient_id>/falls/new", methods=["GET", "POST"])
+@require_roles(CARE_ADMIN, NURSE)
 def fall_new(patient_id: int):
     patient = db.get_patient(patient_id)
     if not patient:
@@ -354,6 +351,13 @@ def fall_new(patient_id: int):
         if patient.get("emergency_contact_name") or patient.get("emergency_contact_phone"):
             suggestion = f"Sugerencia: avisar al contacto de emergencia: {patient.get('emergency_contact_name') or ''} ({patient.get('emergency_contact_phone') or ''})"
             msg = f"{msg}. {suggestion}".strip()
+        db.log_audit(
+            "create_fall_event",
+            "fall_event",
+            None,
+            get_current_role(request),
+            {"patient_id": patient_id, "location": location},
+        )
         return redirect(url_for("patient_detail", patient_id=patient_id, msg=msg))
     default_dt = db.now().strftime("%Y-%m-%dT%H:%M")
     return render_template("falls_new.html", patient=patient, error=None, default_dt=default_dt)
@@ -369,6 +373,7 @@ def falls_list(patient_id: int):
 
 
 @app.route("/medications/<int:med_id>/edit", methods=["GET", "POST"])
+@require_roles(CARE_ADMIN, NURSE)
 def medication_edit(med_id: int):
     med = db.get_medication(med_id)
     if not med:
@@ -408,11 +413,19 @@ def medication_edit(med_id: int):
             return render_template("medication_edit.html", med=med, patient_id=patient_id, error=error)
         db.update_medication(med_id, name, dose, frequency_hours, notes, start_time, end_time)
         db.reset_future_events(med_id, seed_time=start_time)
+        db.log_audit(
+            "update_medication",
+            "medication",
+            med_id,
+            get_current_role(request),
+            {"patient_id": patient_id, "frequency_hours": frequency_hours, "has_end_time": bool(end_time)},
+        )
         return redirect(url_for("patient_detail", patient_id=patient_id))
     return render_template("medication_edit.html", med=med, patient_id=patient_id, error=None)
 
 
 @app.route("/medications/<int:med_id>/toggle_active", methods=["POST"])
+@require_roles(CARE_ADMIN, NURSE)
 def medication_toggle_active(med_id: int):
     med = db.get_medication(med_id)
     if not med:
@@ -433,14 +446,23 @@ def medication_toggle_active(med_id: int):
         db.delete_pending_events_for_medication(med_id)
     else:
         db.ensure_next_dose_event(med_id)
+    db.log_audit(
+        "toggle_medication_active",
+        "medication",
+        med_id,
+        get_current_role(request),
+        {"patient_id": patient_id, "active": new_active},
+    )
     return redirect(url_for("patient_detail", patient_id=patient_id))
 
 
 @app.route("/dev/seed", methods=["POST"])
+@require_roles(CARE_ADMIN)
 def dev_seed():
     if not (app.debug or app.env == "development"):
         return "Not found", 404
     db.seed_demo()
+    db.log_audit("seed_demo", "seed", None, get_current_role(request), None)
     return redirect(url_for("patient_list", msg="Demo data loaded"))
 
 

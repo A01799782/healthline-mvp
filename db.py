@@ -1,3 +1,4 @@
+import json
 import os
 import sqlite3
 from contextlib import contextmanager
@@ -80,6 +81,19 @@ def init_db():
                 location TEXT NOT NULL,
                 note TEXT,
                 FOREIGN KEY(patient_id) REFERENCES patient(id)
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts TEXT NOT NULL,
+                action TEXT NOT NULL,
+                entity_type TEXT NOT NULL,
+                entity_id INTEGER,
+                actor_role TEXT,
+                meta_json TEXT
             )
             """
         )
@@ -506,6 +520,19 @@ def list_overdue_pending_events(patient_id: int, now_iso: str):
             (patient_id, now_iso),
         )
         return cur.fetchall()
+
+
+def log_audit(action: str, entity_type: str, entity_id: int | None, actor_role: str | None, meta: dict | None = None):
+    ts = now().isoformat()
+    payload = json.dumps(meta) if meta else None
+    with db_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO audit_log (ts, action, entity_type, entity_id, actor_role, meta_json)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (ts, action, entity_type, entity_id, actor_role, payload),
+        )
 
 
 def delete_patient(patient_id: int):
