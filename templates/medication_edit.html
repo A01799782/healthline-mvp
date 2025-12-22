@@ -5,8 +5,10 @@
     <h2>Editar medicamento</h2>
     {% if error %}<div style="color:#c62828;">{{ error }}</div>{% endif %}
     <form method="post">
+        <input type="hidden" name="rxnorm_rxcui" id="rxnorm_rxcui_edit" value="{{ med.rxnorm_rxcui }}">
+        <input type="hidden" name="rxnorm_name" id="rxnorm_name_edit" value="{{ med.rxnorm_name }}">
         <label>Nombre</label>
-        <input type="text" name="name" value="{{ med.name }}" required>
+        <input type="text" name="name" id="med_name_edit" value="{{ med.name }}" required>
         <label>Dosis</label>
         <input type="text" name="dose" value="{{ med.dose }}" required>
         <label>Frecuencia (horas)</label>
@@ -25,4 +27,11 @@
         </div>
     </form>
 </div>
+<script>
+(function() {
+    const init = function() { window.setupRxnorm("med_name_edit", "rxnorm_rxcui_edit", "rxnorm_name_edit"); };
+    if (window.setupRxnorm) { init(); }
+    else { window.addEventListener("load", function() { if (window.setupRxnorm) init(); }); }
+})();
+</script>
 {% endblock %}

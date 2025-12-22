@@ -3,7 +3,9 @@ from flask import Flask, redirect, render_template, request, url_for
 
 import db
 from services.dose_status import compute_event_status
+from services.rxnorm import fetch_suggestions
 from authz import CARE_ADMIN, NURSE, get_current_role, require_roles
+import json
 
 app = Flask(__name__)
 
@@ -125,6 +127,8 @@ def medication_new():
     notes = request.form.get("notes", "").strip() or None
     start_time_raw = request.form.get("start_time", "").strip()
     end_time_raw = request.form.get("end_time", "").strip()
+    rxnorm_rxcui = request.form.get("rxnorm_rxcui", "").strip() or None
+    rxnorm_name = request.form.get("rxnorm_name", "").strip() or None
     if not name or not dose or not freq:
         return redirect(url_for("patient_detail", patient_id=patient_id))
     try:
@@ -144,13 +148,29 @@ def medication_new():
             end_time = datetime.fromisoformat(end_time_raw)
         except ValueError:
             end_time = None
-    med_id = db.add_medication(patient_id, name, dose, frequency_hours, notes, start_time, end_time=end_time)
+    med_id = db.add_medication(
+        patient_id,
+        name,
+        dose,
+        frequency_hours,
+        notes,
+        start_time,
+        end_time=end_time,
+        rxnorm_rxcui=rxnorm_rxcui,
+        rxnorm_name=rxnorm_name or name,
+    )
     db.log_audit(
         "create_medication",
         "medication",
         med_id,
         get_current_role(request),
-        {"patient_id": patient_id, "frequency_hours": frequency_hours, "has_end_time": bool(end_time)},
+        {
+            "patient_id": patient_id,
+            "frequency_hours": frequency_hours,
+            "has_end_time": bool(end_time),
+            "rxnorm_selected": bool(rxnorm_rxcui),
+            "rxnorm_rxcui": rxnorm_rxcui,
+        },
     )
     return redirect(url_for("patient_detail", patient_id=patient_id))
 
@@ -170,6 +190,14 @@ def alerts():
     enriched.sort(key=lambda e: (e["_order_bucket"], e["_order_time"]))
     patient_names = db.get_patient_names()
     return render_template("alerts.html", events=enriched, patient_name=patient_name, patient_names=patient_names)
+
+
+@app.route("/api/rxnorm/suggest")
+def rxnorm_suggest():
+    query = request.args.get("query", "").strip()
+    now_iso = db.now().isoformat()
+    suggestions = fetch_suggestions(query, now_iso)
+    return json.dumps(suggestions), 200, {"Content-Type": "application/json"}
 
 
 @app.route("/patients/<int:patient_id>/today")
@@ -386,6 +414,8 @@ def medication_edit(med_id: int):
         notes = request.form.get("notes", "").strip() or None
         start_raw = request.form.get("start_time", "").strip()
         end_raw = request.form.get("end_time", "").strip()
+        rxnorm_rxcui = request.form.get("rxnorm_rxcui", "").strip() or None
+        rxnorm_name = request.form.get("rxnorm_name", "").strip() or None
         error = None
         if not name:
             error = "El nombre es obligatorio."
@@ -411,14 +441,20 @@ def medication_edit(med_id: int):
                 error = error or "Formato de hora fin inválido."
         if error:
             return render_template("medication_edit.html", med=med, patient_id=patient_id, error=error)
-        db.update_medication(med_id, name, dose, frequency_hours, notes, start_time, end_time)
+        db.update_medication(med_id, name, dose, frequency_hours, notes, start_time, end_time, active=med.get("active"), rxnorm_rxcui=rxnorm_rxcui, rxnorm_name=rxnorm_name or name)
         db.reset_future_events(med_id, seed_time=start_time)
         db.log_audit(
             "update_medication",
             "medication",
             med_id,
             get_current_role(request),
-            {"patient_id": patient_id, "frequency_hours": frequency_hours, "has_end_time": bool(end_time)},
+            {
+                "patient_id": patient_id,
+                "frequency_hours": frequency_hours,
+                "has_end_time": bool(end_time),
+                "rxnorm_selected": bool(rxnorm_rxcui),
+                "rxnorm_rxcui": rxnorm_rxcui,
+            },
         )
         return redirect(url_for("patient_detail", patient_id=patient_id))
     return render_template("medication_edit.html", med=med, patient_id=patient_id, error=None)

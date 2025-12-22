@@ -164,8 +164,10 @@
             <h3>Agregar medicamento</h3>
             <form method="post" action="{{ url_for('medication_new') }}">
                 <input type="hidden" name="patient_id" value="{{ patient.id }}">
+                <input type="hidden" name="rxnorm_rxcui" id="rxnorm_rxcui_new">
+                <input type="hidden" name="rxnorm_name" id="rxnorm_name_new">
                 <label>Nombre</label>
-                <input type="text" name="name" required>
+                <input type="text" name="name" id="med_name_new" required>
                 <label>Dosis</label>
                 <input type="text" name="dose" placeholder="Ej. 500mg" required>
                 <label>Frecuencia (horas)</label>
@@ -181,4 +183,11 @@
         </div>
     </div>
 </div>
+<script>
+(function() {
+    const init = function() { window.setupRxnorm("med_name_new", "rxnorm_rxcui_new", "rxnorm_name_new"); };
+    if (window.setupRxnorm) { init(); }
+    else { window.addEventListener("load", function() { if (window.setupRxnorm) init(); }); }
+})();
+</script>
 {% endblock %}

@@ -97,6 +97,15 @@ def init_db():
             )
             """
         )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS rxnorm_cache (
+                query TEXT PRIMARY KEY,
+                response_json TEXT,
+                updated_at TEXT
+            )
+            """
+        )
         _ensure_medication_columns(cur)
         _ensure_patient_columns(cur)
         _ensure_dose_event_columns(cur)
@@ -111,6 +120,10 @@ def _ensure_medication_columns(cur):
         cur.execute("ALTER TABLE medication ADD COLUMN start_time TEXT")
     if "active" not in cols:
         cur.execute("ALTER TABLE medication ADD COLUMN active INTEGER NOT NULL DEFAULT 1")
+    if "rxnorm_rxcui" not in cols:
+        cur.execute("ALTER TABLE medication ADD COLUMN rxnorm_rxcui TEXT")
+    if "rxnorm_name" not in cols:
+        cur.execute("ALTER TABLE medication ADD COLUMN rxnorm_name TEXT")
 
 
 def _ensure_patient_columns(cur):
@@ -282,12 +295,14 @@ def add_medication(
     start_time: datetime,
     end_time: datetime | None = None,
     active: int = 1,
+    rxnorm_rxcui: str | None = None,
+    rxnorm_name: str | None = None,
 ):
     with db_cursor() as cur:
         cur.execute(
             """
-            INSERT INTO medication (patient_id, name, dose, frequency_hours, notes, end_time, start_time, active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO medication (patient_id, name, dose, frequency_hours, notes, end_time, start_time, active, rxnorm_rxcui, rxnorm_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 patient_id,
@@ -298,6 +313,8 @@ def add_medication(
                 end_time.isoformat() if end_time else None,
                 start_time.isoformat(),
                 active,
+                rxnorm_rxcui,
+                rxnorm_name,
             ),
         )
         medication_id = cur.lastrowid
@@ -329,6 +346,8 @@ def update_medication(
     start_time: datetime | None,
     end_time: datetime | None,
     active: int | None = None,
+    rxnorm_rxcui: str | None = None,
+    rxnorm_name: str | None = None,
 ):
     with db_cursor() as cur:
         fields = [
@@ -341,6 +360,8 @@ def update_medication(
         ]
         if active is not None:
             fields.append(("active", active))
+        fields.append(("rxnorm_rxcui", rxnorm_rxcui))
+        fields.append(("rxnorm_name", rxnorm_name))
         set_clause = ", ".join(f"{f[0]} = ?" for f in fields)
         values = [f[1] for f in fields]
         values.append(medication_id)
@@ -532,6 +553,25 @@ def log_audit(action: str, entity_type: str, entity_id: int | None, actor_role: 
             VALUES (?, ?, ?, ?, ?, ?)
             """,
             (ts, action, entity_type, entity_id, actor_role, payload),
+        )
+
+
+def get_cached_rxnorm(query: str):
+    with db_cursor() as cur:
+        cur.execute("SELECT response_json, updated_at FROM rxnorm_cache WHERE query = ?", (query,))
+        return cur.fetchone()
+
+
+def upsert_rxnorm_cache(query: str, response_json: str):
+    now_ts = now().isoformat()
+    with db_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO rxnorm_cache (query, response_json, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(query) DO UPDATE SET response_json = excluded.response_json, updated_at = excluded.updated_at
+            """,
+            (query, response_json, now_ts),
         )
 
 
