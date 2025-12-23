@@ -737,103 +737,90 @@ def reset_all():
 def seed_demo():
     reset_all()
     base_now = now()
-    # Helper to build DOB safely between 65-95 years old
-    def dob_for_age(age_years: int) -> str:
-        target_year = base_now.year - age_years
-        # use mid-year to avoid month/day edge cases
-        return f"{target_year}-06-15"
-
     patients = [
         {
-            "name": "Maria Alvarez",
-            "notes": "Seguimiento HTA y DM2",
-            "date_of_birth": dob_for_age(78),
-            "diagnosis": "Hipertensión y diabetes tipo 2",
-            "allergies": "Penicilina",
-            "ec_name": "Laura Alvarez",
-            "ec_phone": "555-8101",
-            "ec_relation": "Hija",
-            "meds": [
-                {"name": "Enalapril", "dose": "10mg", "freq": 12, "notes": "HTA", "start_offset": -10, "end_offset": None, "active": 1},
-                {"name": "Metformina", "dose": "850mg", "freq": 12, "notes": "DM2", "start_offset": -6, "end_offset": None, "active": 1},
-                {"name": "Simvastatina", "dose": "20mg", "freq": 24, "notes": "Lípidos", "start_offset": -20, "end_offset": None, "active": 1},
-            ],
-        },
-        {
-            "name": "Jorge Ramirez",
-            "notes": "Deterioro cognitivo",
-            "date_of_birth": dob_for_age(84),
-            "diagnosis": "Alzheimer",
-            "allergies": "Sin alergias conocidas",
-            "ec_name": "Sofia Ramirez",
-            "ec_phone": "555-8202",
-            "ec_relation": "Hija",
-            "meds": [
-                {"name": "Donepezilo", "dose": "10mg", "freq": 24, "notes": "Demencia", "start_offset": -24, "end_offset": None, "active": 1},
-                {"name": "Memantina", "dose": "10mg", "freq": 12, "notes": "Demencia", "start_offset": -8, "end_offset": None, "active": 1},
-                {"name": "Quetiapina", "dose": "25mg", "freq": 24, "notes": "Conducta nocturna", "start_offset": -2, "end_offset": None, "active": 1},
-            ],
-        },
-        {
-            "name": "Carmen Soto",
-            "notes": "EPOC + HTA",
-            "date_of_birth": dob_for_age(90),
-            "diagnosis": "EPOC e hipertensión",
+            "name": "Ana Torres",
+            "notes": "HTA controlada, seguimiento mensual",
+            "date_of_birth": "1952-04-18",
+            "diagnosis": "Hipertensión",
             "allergies": "AINEs",
-            "ec_name": "Diego Soto",
-            "ec_phone": "555-8303",
+            "ec_name": "Lucia Torres",
+            "ec_phone": "555-1001",
+            "ec_relation": "Hija",
+            "photo_path": "seed_photos/patient1.jpg",
+            "falls": [7],
+            "meds": [
+                {"name": "Enalapril", "dose": "10mg", "freq": 12, "notes": "HTA"},
+            ],
+        },
+        {
+            "name": "Beatriz Suarez",
+            "notes": "DM2 con nefropatía leve",
+            "date_of_birth": "1955-09-05",
+            "diagnosis": "Diabetes tipo 2",
+            "allergies": "Penicilina",
+            "ec_name": "Carlos Suarez",
+            "ec_phone": "555-1002",
             "ec_relation": "Hijo",
+            "photo_path": "seed_photos/patient2.jpeg",
+            "falls": [15, 25],
             "meds": [
-                {"name": "Salmeterol", "dose": "1 inhalación", "freq": 12, "notes": "EPOC", "start_offset": -5, "end_offset": None, "active": 1},
-                {"name": "Tiotropio", "dose": "1 inhalación", "freq": 24, "notes": "EPOC", "start_offset": -15, "end_offset": None, "active": 1},
-                {"name": "Amoxicilina", "dose": "500mg", "freq": 8, "notes": "Exacerbación, antibiótico", "start_offset": -12, "end_offset": 24, "active": 1},
+                {"name": "Metformina", "dose": "850mg", "freq": 12, "notes": "Glucosa"},
             ],
         },
         {
-            "name": "Luis Herrera",
-            "notes": "ICC y ERC",
-            "date_of_birth": dob_for_age(70),
-            "diagnosis": "Insuficiencia cardiaca y renal",
-            "allergies": "Sulfas",
-            "ec_name": "Carmen Herrera",
-            "ec_phone": "555-8404",
-            "ec_relation": "Esposa",
-            "meds": [
-                {"name": "Furosemida", "dose": "40mg", "freq": 24, "notes": "ICC", "start_offset": -26, "end_offset": None, "active": 1},
-                {"name": "Carvedilol", "dose": "12.5mg", "freq": 12, "notes": "ICC", "start_offset": -4, "end_offset": None, "active": 1},
-                {"name": "Calcio", "dose": "600mg", "freq": 24, "notes": "Suplemento", "start_offset": 2, "end_offset": None, "active": 1},
-            ],
-        },
-        {
-            "name": "Elena Chavez",
-            "notes": "Dolor crónico y ánimo",
-            "date_of_birth": dob_for_age(82),
-            "diagnosis": "Osteoartritis y depresión geriátrica",
-            "allergies": "Látex",
-            "ec_name": "Mario Chavez",
-            "ec_phone": "555-8505",
-            "ec_relation": "Hijo",
-            "meds": [
-                {"name": "Paracetamol", "dose": "500mg", "freq": 6, "notes": "Dolor", "start_offset": -3, "end_offset": None, "active": 1},
-                {"name": "Duloxetina", "dose": "60mg", "freq": 24, "notes": "Ánimo/dolor", "start_offset": -22, "end_offset": None, "active": 1},
-                {"name": "Naproxeno", "dose": "250mg", "freq": 12, "notes": "Dolor articular (pausado)", "start_offset": -10, "end_offset": None, "active": 0},
-            ],
-        },
-        {
-            "name": "Rosa Medina",
-            "notes": "DM2 con neuropatía",
-            "date_of_birth": dob_for_age(88),
-            "diagnosis": "Diabetes tipo 2 con neuropatía",
+            "name": "Carlos Pineda",
+            "notes": "EPOC moderado, broncodilatador",
+            "date_of_birth": "1948-12-10",
+            "diagnosis": "EPOC",
             "allergies": "Sin alergias conocidas",
-            "ec_name": "Andres Medina",
-            "ec_phone": "555-8606",
-            "ec_relation": "Nieto",
+            "ec_name": "Diego Pineda",
+            "ec_phone": "555-1003",
+            "ec_relation": "Hijo",
+            "photo_path": "seed_photos/patient3.jpg",
+            "falls": [10, 40, 60],
             "meds": [
-                {"name": "Insulina NPH", "dose": "18U", "freq": 12, "notes": "DM2", "start_offset": -7, "end_offset": None, "active": 1},
-                {"name": "Pregabalina", "dose": "75mg", "freq": 12, "notes": "Neuropatía", "start_offset": -1, "end_offset": None, "active": 1},
+                {"name": "Tiotropio", "dose": "1 inhalación", "freq": 24, "notes": "EPOC"},
+            ],
+        },
+        {
+            "name": "David Mendoza",
+            "notes": "Insuficiencia cardiaca estable",
+            "date_of_birth": "1958-07-22",
+            "diagnosis": "ICC",
+            "allergies": "Sulfas",
+            "ec_name": "Laura Mendoza",
+            "ec_phone": "555-1004",
+            "ec_relation": "Esposa",
+            "photo_path": "seed_photos/patient4.jpeg",
+            "falls": [],
+            "meds": [
+                {"name": "Furosemida", "dose": "40mg", "freq": 24, "notes": "ICC"},
             ],
         },
     ]
+
+    def add_events_for_med(mid: int, taken_hours: list[int], overdue_hours: list[int], future_hours: list[int]):
+        with db_cursor() as cur:
+            cur.execute("DELETE FROM dose_event WHERE medication_id = ?", (mid,))
+        for h in taken_hours:
+            with db_cursor() as cur:
+                cur.execute(
+                    "INSERT INTO dose_event (medication_id, scheduled_time, taken, skipped) VALUES (?, ?, ?, ?)",
+                    (mid, (base_now - timedelta(hours=h)).isoformat(), 1, 0),
+                )
+        for h in overdue_hours:
+            with db_cursor() as cur:
+                cur.execute(
+                    "INSERT INTO dose_event (medication_id, scheduled_time, taken, skipped) VALUES (?, ?, ?, ?)",
+                    (mid, (base_now - timedelta(hours=h)).isoformat(), 0, 0),
+                )
+        for h in future_hours:
+            with db_cursor() as cur:
+                cur.execute(
+                    "INSERT INTO dose_event (medication_id, scheduled_time, taken, skipped) VALUES (?, ?, ?, ?)",
+                    (mid, (base_now + timedelta(hours=h)).isoformat(), 0, 0),
+                )
 
     for p in patients:
         pid = add_patient(
@@ -845,10 +832,16 @@ def seed_demo():
             emergency_contact_name=p.get("ec_name"),
             emergency_contact_phone=p.get("ec_phone"),
             emergency_contact_relation=p.get("ec_relation"),
+            photo_path=p.get("photo_path"),
         )
+        for days in p["falls"]:
+            with db_cursor() as cur:
+                cur.execute(
+                    "INSERT INTO fall_event (patient_id, occurred_at, location, note) VALUES (?, ?, ?, ?)",
+                    (pid, (base_now - timedelta(days=days)).isoformat(), "Pasillo", "Demo"),
+                )
         for m in p["meds"]:
-            start_time = base_now + timedelta(hours=m["start_offset"])
-            end_time = base_now + timedelta(hours=m["end_offset"]) if m["end_offset"] is not None else None
+            start_time = base_now - timedelta(hours=24)
             mid = add_medication(
                 pid,
                 m["name"],
@@ -856,15 +849,11 @@ def seed_demo():
                 m["freq"],
                 m["notes"],
                 start_time,
-                end_time=end_time,
-                active=m["active"],
+                end_time=None,
+                active=1,
             )
-            if m["active"]:
-                for _ in range(2):
-                    ensure_next_dose_event(mid)
-            else:
-                # limpiar pendientes del pausado
-                delete_pending_events_for_medication(mid)
+            # Populate deterministic events: 2 taken in past, 1 overdue, 1 future pending
+            add_events_for_med(mid, taken_hours=[30, 18], overdue_hours=[6], future_hours=[6])
 
 
 def list_patient_events_for_day(patient_id: int, day_start_iso: str, day_end_iso: str):

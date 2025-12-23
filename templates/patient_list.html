@@ -9,6 +9,11 @@
         {% if msg %}
         <div class="card" style="background:#e8f5e9;color:#2e7d32;">{{ msg }}</div>
         {% endif %}
+        <div style="display:flex; justify-content:flex-end; gap:12px; font-size:12px; color:#666; margin:8px 0; align-items:center; flex-wrap:wrap;">
+            <span class="status-dot dot-yellow"></span><span>1 caída</span>
+            <span class="status-dot dot-red"></span><span>2 caídas</span>
+            <span class="status-dot dot-gray"></span><span>3+ caídas (90 días)</span>
+        </div>
         {% for p in patients %}
         <a href="{{ url_for('patient_detail', patient_id=p.id) }}" class="patient-card-link">
             <div class="card patient-card">
@@ -22,7 +27,13 @@
                         <div style="display:flex;align-items:center;gap:6px;">
                             <div class="patient-name">{{ p.name }}</div>
                             {% set falls = fall_counts.get(p.id, 0) %}
-                            {% if falls == 1 %} 🟡{% elif falls == 2 %} 🔴{% elif falls >=3 %} ⚫{% endif %}
+                            {% if falls == 1 %}
+                                <span class="status-dot dot-yellow" title="1 caída en los últimos 90 días"></span>
+                            {% elif falls == 2 %}
+                                <span class="status-dot dot-red" title="2 caídas en los últimos 90 días"></span>
+                            {% elif falls >= 3 %}
+                                <span class="status-dot dot-gray" title="3 o más caídas en los últimos 90 días"></span>
+                            {% endif %}
                         </div>
                         {% if p.notes %}<div class="muted patient-notes">{{ p.notes }}</div>{% endif %}
                     </div>
@@ -110,5 +121,9 @@
 .patient-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .patient-name { font-size: 18px; font-weight: 700; }
 .patient-notes { font-size: 13px; }
+.status-dot { display:inline-block; width:14px; height:14px; border-radius:50%; box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.15); }
+.dot-yellow { background:#fdd835; }
+.dot-red { background:#d32f2f; }
+.dot-gray { background:#424242; }
 </style>
 {% endblock %}
