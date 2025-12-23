@@ -32,6 +32,7 @@
     <form method="get" action="{{ url_for('alerts') }}" class="filters">
         <input type="hidden" name="w" value="{{ window_param }}">
         <input type="hidden" name="s" value="{{ status_param }}">
+        <input type="hidden" name="h" value="{{ horizon_param }}">
         <div style="flex:1;min-width:240px;">
             <label for="patient_name">Paciente</label>
             <input type="text" name="patient_name" id="patient_name" list="patient-list" value="{{ patient_name }}" placeholder="Filtrar por nombre">
@@ -48,11 +49,11 @@
     </form>
     <div style="margin-top:12px; display:flex; gap:12px; flex-wrap:wrap;">
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <span class="muted" style="font-weight:600;">Ventana</span>
+            <span class="muted" style="font-weight:600;">Historial</span>
             {% set win_opts = [("24h","24h"),("72h","72h"),("7d","7d"),("30d","30d")] %}
             {% for key,label in win_opts %}
             <a class="pill {% if window_param==key %}state state-proxima{% else %}pill-gray{% endif %}" style="text-decoration:none;"
-               href="{{ url_for('alerts', patient_name=patient_name, w=key, s=status_param) }}">{{ label }}</a>
+               href="{{ url_for('alerts', patient_name=patient_name, w=key, s=status_param, h=horizon_param) }}">{{ label }}</a>
             {% endfor %}
         </div>
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
@@ -60,7 +61,15 @@
             {% set st_opts = [("all","Todo"),("pending_only","Pendientes"),("overdue_only","Vencidas")] %}
             {% for key,label in st_opts %}
             <a class="pill {% if status_param==key %}state state-proxima{% else %}pill-gray{% endif %}" style="text-decoration:none;"
-               href="{{ url_for('alerts', patient_name=patient_name, w=window_param, s=key) }}">{{ label }}</a>
+               href="{{ url_for('alerts', patient_name=patient_name, w=window_param, s=key, h=horizon_param) }}">{{ label }}</a>
+            {% endfor %}
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span class="muted" style="font-weight:600;">Próximas</span>
+            {% set h_opts = [("24h","24h"),("72h","72h")] %}
+            {% for key,label in h_opts %}
+            <a class="pill {% if horizon_param==key %}state state-proxima{% else %}pill-gray{% endif %}" style="text-decoration:none;"
+               href="{{ url_for('alerts', patient_name=patient_name, w=window_param, s=status_param, h=key) }}">{{ label }}</a>
             {% endfor %}
         </div>
     </div>

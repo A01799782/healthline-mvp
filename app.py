@@ -213,6 +213,7 @@ def medication_new():
         dose_value=dose_value or None,
         dose_unit=dose_unit or None,
     )
+    db.ensure_events_until(med_id, horizon_hours=72, now_dt=db.now())
     db.log_audit(
         "create_medication",
         "medication",
@@ -236,9 +237,19 @@ def alerts():
     patient_name = request.args.get("patient_name", "").strip()
     window_param = request.args.get("w", "24h")
     status_param = request.args.get("s", "all")
+    horizon_param = request.args.get("h", "24h")
     window_map = {"24h": "-1 day", "72h": "-3 day", "7d": "-7 day", "30d": "-30 day"}
     lookback = window_map.get(window_param, "-1 day")
-    events = db.list_upcoming_dose_events(patient_name=patient_name if patient_name else None, lookback_sql=lookback)
+    horizon_map = {"24h": 24, "72h": 72}
+    horizon_hours = horizon_map.get(horizon_param, 24)
+    # prefill future events
+    for mid in db.list_active_medication_ids():
+        db.ensure_events_until(mid, horizon_hours=horizon_hours, now_dt=db.now())
+    events = db.list_upcoming_dose_events(
+        patient_name=patient_name if patient_name else None,
+        lookback_sql=lookback,
+        horizon_hours=horizon_hours,
+    )
     current_time = db.now()
     enriched = []
     for ev in events:
@@ -268,6 +279,7 @@ def alerts():
         patient_names=patient_names,
         window_param=window_param,
         status_param=status_param,
+        horizon_param=horizon_param,
     )
 
 
@@ -550,6 +562,7 @@ def medication_edit(med_id: int):
             dose_unit=dose_unit or None,
         )
         db.reset_future_events(med_id, seed_time=start_time)
+        db.ensure_events_until(med_id, horizon_hours=72, now_dt=db.now())
         db.log_audit(
             "update_medication",
             "medication",
@@ -591,6 +604,7 @@ def medication_toggle_active(med_id: int):
         db.delete_pending_events_for_medication(med_id)
     else:
         db.ensure_next_dose_event(med_id)
+        db.ensure_events_until(med_id, horizon_hours=72, now_dt=db.now())
     db.log_audit(
         "toggle_medication_active",
         "medication",

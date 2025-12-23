@@ -509,8 +509,87 @@ def ensure_next_dose_event(medication_id: int):
             _insert_dose_event(cur, medication_id, next_time)
 
 
-def list_upcoming_dose_events(limit: int = 50, patient_name: str | None = None, lookback_sql: str | None = None):
-    now_ts = to_db_timestamp(now())
+def ensure_events_until(medication_id: int, horizon_hours: int, now_dt: datetime | None = None, cap: int = 40):
+    """Create pending events up to horizon for an active medication. Returns created count."""
+    med = get_medication(medication_id)
+    if not med:
+        return 0
+    if not med.get("active", 1):
+        return 0
+    try:
+        freq = int(med.get("frequency_hours") or 0)
+    except Exception:
+        return 0
+    if freq <= 0:
+        return 0
+    now_dt = now_dt or now()
+    horizon_end = now_dt + timedelta(hours=horizon_hours)
+    start_raw = med.get("start_time")
+    end_raw = med.get("end_time")
+    start_dt = datetime.fromisoformat(start_raw) if start_raw else None
+    end_dt = datetime.fromisoformat(end_raw) if end_raw else None
+    if end_dt and end_dt < now_dt:
+        return 0
+
+    with db_cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, scheduled_time, taken, skipped
+            FROM dose_event
+            WHERE medication_id = ?
+            ORDER BY scheduled_time ASC
+            """,
+            (medication_id,),
+        )
+        rows = cur.fetchall()
+        times = []
+        for r in rows:
+            try:
+                times.append(datetime.fromisoformat(r["scheduled_time"]))
+            except Exception:
+                continue
+        created = 0
+        if not times:
+            seed_time = max(now_dt, start_dt) if start_dt else now_dt
+            if end_dt and seed_time > end_dt:
+                return 0
+            _insert_dose_event(cur, medication_id, seed_time)
+            times.append(seed_time)
+            created += 1
+        last_time = times[-1]
+        if start_dt and last_time < start_dt:
+            last_time = start_dt
+        safety = 0
+        while last_time < horizon_end and safety < cap:
+            next_time = last_time + timedelta(hours=freq)
+            safety += 1
+            if end_dt and next_time > end_dt:
+                break
+            ts_str = to_db_timestamp(next_time)
+            cur.execute(
+                """
+                SELECT COUNT(*) AS c FROM dose_event
+                WHERE medication_id = ? AND scheduled_time = ? AND taken = 0 AND skipped = 0
+                """,
+                (medication_id, ts_str),
+            )
+            exists = cur.fetchone()["c"] > 0
+            if not exists:
+                _insert_dose_event(cur, medication_id, next_time)
+                created += 1
+            last_time = next_time
+    return created
+
+
+def list_upcoming_dose_events(
+    limit: int = 50,
+    patient_name: str | None = None,
+    lookback_sql: str | None = None,
+    horizon_hours: int = 24,
+):
+    now_dt = now()
+    now_ts = to_db_timestamp(now_dt)
+    horizon_end = to_db_timestamp(now_dt + timedelta(hours=horizon_hours))
     filter_name = (patient_name or "").strip()
     clauses = []
     params = []
@@ -528,11 +607,12 @@ def list_upcoming_dose_events(limit: int = 50, patient_name: str | None = None, 
             JOIN medication m ON de.medication_id = m.id
             JOIN patient p ON m.patient_id = p.id
             WHERE datetime(de.scheduled_time) >= datetime(?, '{lb}')
+              AND datetime(de.scheduled_time) <= datetime(?)
         """
         if clauses:
             query += " AND " + " AND ".join(clauses)
         query += " ORDER BY de.scheduled_time ASC LIMIT ?"
-        cur.execute(query, (now_ts, *params, limit))
+        cur.execute(query, (now_ts, horizon_end, *params, limit))
         events = cur.fetchall()
     return events
 
@@ -718,6 +798,13 @@ def list_fall_events(patient_id: int, limit: int = 50):
             (patient_id, limit),
         )
         return cur.fetchall()
+
+
+def list_active_medication_ids():
+    with db_cursor() as cur:
+        cur.execute("SELECT id FROM medication WHERE active = 1")
+        rows = cur.fetchall()
+        return [r["id"] for r in rows]
 
 
 def count_falls_last_90_days(patient_id: int, now_iso: str):
