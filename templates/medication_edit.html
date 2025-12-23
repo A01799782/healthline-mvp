@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<a href="{{ url_for('patient_detail', patient_id=patient_id) }}">&larr; Volver</a>
+<a href="{{ url_for('patient_detail', patient_id=patient_id) }}" class="link-plain">&larr; Volver</a>
 <div class="card" style="margin-top:12px;">
-    <h2>Editar medicamento</h2>
-    {% if error %}<div style="color:#c62828;">{{ error }}</div>{% endif %}
-    <form method="post">
+    <h2 style="margin-top:0;">Editar medicamento</h2>
+    {% if error %}<div class="pill pill-danger">{{ error }}</div>{% endif %}
+    <form method="post" enctype="multipart/form-data">
         <input type="hidden" name="rxnorm_rxcui" id="rxnorm_rxcui_edit" value="{{ med.rxnorm_rxcui }}">
         <input type="hidden" name="rxnorm_name" id="rxnorm_name_edit" value="{{ med.rxnorm_name }}">
         <label>Nombre</label>
@@ -27,10 +27,10 @@
         <input type="datetime-local" name="end_time" value="{{ med.end_time[:16] if med.end_time }}">
         <label>Notas</label>
         <textarea name="notes" rows="3" placeholder="Instrucciones adicionales (opcional)">{{ med.notes }}</textarea>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;">
             <button type="submit">Guardar</button>
-            <a href="{{ url_for('patient_detail', patient_id=patient_id) }}">
-                <button type="button" style="background:#757575;">Cancelar</button>
+            <a href="{{ url_for('patient_detail', patient_id=patient_id) }}" class="link-plain">
+                <button type="button" class="btn-ghost">Cancelar</button>
             </a>
         </div>
     </form>

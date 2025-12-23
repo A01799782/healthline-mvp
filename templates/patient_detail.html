@@ -1,48 +1,53 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-  .adherence-grid {
-    display: inline-grid;
-    grid-template-columns: auto auto;
-    row-gap: 4px;
-    column-gap: 12px;
-  }
-  .adherence-pct { margin-top: 8px; font-weight: 600; }
-  .adherence-grid div:nth-child(2n) {
-    text-align: right;
-    font-weight: 600;
-    justify-self: end;
-  }
-  .adherence-pct-row{
-    display:flex;
-    gap:8px;
-    margin-top:8px;
-  }
+  .adherence-grid { display: inline-grid; grid-template-columns: auto auto; row-gap: 4px; column-gap: 12px; }
+  .adherence-grid div:nth-child(2n) { text-align: right; font-weight: 600; justify-self: end; }
+  .adherence-pct-row { display:flex; gap:8px; margin-top:8px; }
+  .pill-status { padding:4px 10px; border-radius:12px; font-size:12px; border:1px solid var(--border); }
+  .pill-blue { background:#e3f2fd; color:#0d47a1; border-color:#cfe2ff; }
+  .pill-green { background:#e8f5e9; color:#2e7d32; border-color:#c8e6c9; }
+  .pill-amber { background:#fff3cd; color:#8a6d3b; border-color:#ffe8a3; }
+  .pill-red { background:#ffe4e0; color:#b42318; border-color:#ffc7be; }
+  .table-clean { width:100%; border-collapse:collapse; }
+  .table-clean th, .table-clean td { padding:10px; border-bottom:1px solid var(--border); text-align:left; font-size:14px; }
+  .table-clean th { color:var(--text-muted); font-weight:700; background:#f9fafb; }
+  .table-clean tr:hover td { background:#f7f8fb; }
+  .header-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .header-title { margin:0; font-size:24px; font-weight:700; color:var(--text); }
+  .avatar-lg { width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg,#eceff3,#dfe3eb); overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  .card-section { margin-top:12px; }
+  .wizard-modal { background:rgba(0,0,0,0.35); }
+  .wizard-box { background:#fff; padding:18px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.12); }
 </style>
 
-<a href="{{ url_for('patient_list') }}">&larr; Volver</a>
-<div style="display:flex;align-items:center;gap:12px;">
-    <div style="width:56px;height:56px;border-radius:50%;background:#e0e0e0;overflow:hidden;flex-shrink:0;">
+<a href="{{ url_for('patient_list') }}" class="link-plain">&larr; Volver</a>
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap; margin-top:8px;">
+    <div class="avatar-lg">
         {% if patient.photo_path %}
         <img src="{{ url_for('static', filename=patient.photo_path) }}" alt="avatar" style="width:100%;height:100%;object-fit:cover;">
         {% endif %}
     </div>
-    <h2 style="margin:0;">{{ patient.name }}</h2>
-    <a href="{{ url_for('patient_edit', patient_id=patient.id) }}" style="text-decoration:none;">
-        <button type="button">Editar</button>
-    </a>
-    <a href="{{ url_for('patient_today', patient_id=patient.id) }}" style="text-decoration:none;">
-        <button type="button" style="background:#0d47a1;">Agenda de hoy</button>
-    </a>
+    <div style="flex:1;min-width:200px;">
+        <div class="header-title">{{ patient.name }}</div>
+        {% if patient.notes %}<div class="muted" style="margin-top:4px;">{{ patient.notes }}</div>{% endif %}
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('patient_edit', patient_id=patient.id) }}" class="link-plain">
+            <button type="button" class="btn-ghost">Editar</button>
+        </a>
+        <a href="{{ url_for('patient_today', patient_id=patient.id) }}" class="link-plain">
+            <button type="button">Agenda de hoy</button>
+        </a>
+    </div>
 </div>
-{% if patient.notes %}<div class="muted">{{ patient.notes }}</div>{% endif %}
 {% if msg %}
 <div class="card" style="background:#e8f5e9;color:#2e7d32;margin-top:8px;">{{ msg }}</div>
 {% endif %}
 
-<div class="card" style="margin-top:12px;">
-    <h3>Perfil del paciente</h3>
-    <table>
+<div class="card card-section">
+    <h3 style="margin-top:0;">Perfil del paciente</h3>
+    <table class="table-clean">
         <tr><th>Edad</th><td>{% if age is not none %}{{ age }} años{% else %}—{% endif %}</td></tr>
         <tr><th>Fecha de nacimiento</th><td>{{ patient.date_of_birth or "—" }}</td></tr>
         <tr><th>Diagnóstico</th><td>{{ patient.diagnosis or "—" }}</td></tr>
@@ -53,8 +58,8 @@
     </table>
 </div>
 
-<div class="card" style="margin-top:12px;">
-    <h3>Eventualidades</h3>
+<div class="card card-section">
+    <h3 style="margin-top:0;">Eventualidades</h3>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <div>Caídas últimos 90 días: <strong>{{ fall_count }}</strong></div>
         <a href="{{ url_for('fall_new', patient_id=patient.id) }}"><button type="button">Reportar caída</button></a>
@@ -63,7 +68,7 @@
 </div>
 <!-- DO NOT EDIT: Adherencia copy/rows are final. No agregar "(vencidas)" ni filas "Futuras" en 7d/30d. -->
 <div class="card">
-    <h3>Adherencia</h3>
+    <h3 style="margin-top:0;">Adherencia</h3>
     <div style="display:flex;gap:16px;flex-wrap:wrap;">
         <div style="flex:1;min-width:220px;">
             <div style="font-weight:bold;margin-bottom:8px;">Hoy</div>
@@ -109,45 +114,56 @@
         </div>
         {% for med, events in meds_with_events %}
         <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div><strong>{{ med.name }}</strong> <span class="pill">{{ (med.dose_value and med.dose_unit) and (med.dose_value ~ ' ' ~ med.dose_unit) or med.dose }}</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                <div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <strong>{{ med.name }}</strong>
+                        <span class="pill">{{ (med.dose_value and med.dose_unit) and (med.dose_value ~ ' ' ~ med.dose_unit) or med.dose }}</span>
+                    </div>
+                    <div class="muted">
+                        Cada {{ med.frequency_hours }} horas{% if med.notes %} · {{ med.notes }}{% endif %}
+                        {% if med.start_time %} · Inicio: {{ fmt_dt(med.start_time) }}{% endif %}
+                        {% if med.end_time %} · Fin: {{ fmt_dt(med.end_time) }}{% endif %}
+                    </div>
+                </div>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <form method="post" action="{{ url_for('medication_toggle_active', med_id=med.id) }}">
                         {% if med.active %}
-                        <button type="submit" style="background:#f9a825;">Pausar</button>
+                        <button type="submit" class="btn-ghost">Pausar</button>
                         {% else %}
-                        <button type="submit" style="background:#2e7d32;">Reanudar</button>
+                        <button type="submit" class="btn-ghost">Reanudar</button>
                         {% endif %}
                     </form>
                     <a href="{{ url_for('medication_edit', med_id=med.id) }}">
-                        <button type="button">Editar</button>
+                        <button type="button" class="btn-ghost">Editar</button>
                     </a>
                     {% if med.ended %}
-                        <span class="pill" style="background:#fce4ec;color:#c2185b;">Terminado</span>
+                        <span class="pill pill-danger">Terminado</span>
                     {% elif not med.active %}
-                        <span class="pill" style="background:#fff3e0;color:#ef6c00;">Pausado</span>
+                        <span class="pill pill-warn">Pausado</span>
                     {% else %}
-                        <span class="pill" style="background:#e8f5e9;color:#2e7d32;">Activo</span>
+                        <span class="pill pill-success">Activo</span>
                     {% endif %}
                 </div>
             </div>
-            <div class="muted">
-                Cada {{ med.frequency_hours }} horas{% if med.notes %} · {{ med.notes }}{% endif %}
-                {% if med.start_time %} · Inicio: {{ fmt_dt(med.start_time) }}{% endif %}
-                {% if med.end_time %} · Fin: {{ fmt_dt(med.end_time) }}{% endif %}
-            </div>
             <div style="margin-top:8px;">
                 <strong>Próximas tomas</strong>
-                <table>
+                <table class="table-clean">
                     <tr><th>Horario</th><th>Estado</th><th>Acción</th></tr>
                     {% for ev in events %}
                     <tr>
                         <td>{{ fmt_dt(ev.scheduled_time) }}</td>
-                        <td>{% if ev.taken %}Realizada{% else %}Pendiente{% endif %}</td>
+                        <td>
+                            {% if ev.taken %}
+                                <span class="pill pill-success">Tomada</span>
+                            {% else %}
+                                <span class="pill pill-warn">Pendiente</span>
+                            {% endif %}
+                        </td>
                         <td>
                             {% if not ev.taken %}
                             <form method="post" action="{{ url_for('take_dose', event_id=ev.id) }}">
-                                <button type="submit">Marcar</button>
+                                <button type="submit" class="btn-ghost">Marcar</button>
                             </form>
                             {% else %}
                             —

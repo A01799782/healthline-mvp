@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-<a href="{{ url_for('patient_detail', patient_id=patient.id) }}">&larr; Volver</a>
+<a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="link-plain">&larr; Volver</a>
 <div class="card" style="margin-top:12px;">
-    <h2>Reportar caída - {{ patient.name }}</h2>
-    {% if error %}<div style="color:#c62828;">{{ error }}</div>{% endif %}
+    <h2 style="margin-top:0;">Reportar caída - {{ patient.name }}</h2>
+    {% if error %}<div class="pill pill-danger">{{ error }}</div>{% endif %}
     <form method="post">
         <label>Fecha y hora</label>
         <input type="datetime-local" name="occurred_at" value="{{ default_dt }}" required>

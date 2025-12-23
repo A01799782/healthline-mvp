@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Próximas tomas</h2>
+<h2 style="margin-top:0;">Próximas tomas</h2>
 <div class="card" style="margin-bottom:12px;">
     <form method="get" action="{{ url_for('alerts') }}" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
         <div style="flex:1;min-width:240px;">
@@ -14,12 +14,12 @@
         </div>
         <div style="display:flex;gap:8px;">
             <button type="submit">Filtrar</button>
-            <a href="{{ url_for('alerts') }}"><button type="button" style="background:#757575;">Limpiar</button></a>
+            <a href="{{ url_for('alerts') }}"><button type="button" class="btn-ghost">Limpiar</button></a>
         </div>
     </form>
 </div>
 <div class="card">
-    <table>
+    <table class="table-clean">
         <tr>
             <th>Paciente</th>
             <th>Medicamento</th>
@@ -37,13 +37,13 @@
             <td>{{ fmt_dt(ev.scheduled_time) }}</td>
             <td>
                 {% if ev.status == 'Omitida' %}
-                    <span class="pill" style="background:#ffe0b2;color:#e65100;">Omitida</span>
+                    <span class="pill pill-amber">Omitida</span>
                 {% elif ev.status == 'Vencida' %}
-                    <span class="pill" style="background:#ffebee;color:#c62828;">Vencida</span>
+                    <span class="pill pill-danger">Vencida</span>
                 {% elif ev.status == 'Próxima' %}
-                    <span class="pill" style="background:#e3f2fd;color:#0d47a1;">Próxima</span>
+                    <span class="pill pill-info">Próxima</span>
                 {% else %}
-                    <span class="pill" style="background:#e8f5e9;color:#2e7d32;">Tomada</span>
+                    <span class="pill pill-success">Tomada</span>
                 {% endif %}
             </td>
             <td>{{ ev.note or "—" }}</td>
@@ -51,19 +51,19 @@
                 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
                     {% if ev.status in ['Tomada', 'Omitida'] %}
                         <form method="post" action="{{ url_for('undo_dose', event_id=ev.id) }}">
-                            <button type="submit">Deshacer</button>
+                            <button type="submit" class="btn-ghost">Deshacer</button>
                         </form>
                     {% else %}
                         <form method="post" action="{{ url_for('take_dose', event_id=ev.id) }}">
-                            <button type="submit">Marcar tomada</button>
+                            <button type="submit" class="btn-ghost">Marcar tomada</button>
                         </form>
                         <form method="post" action="{{ url_for('skip_dose', event_id=ev.id) }}">
-                            <button type="submit" style="background:#f9a825;">Omitir</button>
+                            <button type="submit" class="btn-ghost">Omitir</button>
                         </form>
                     {% endif %}
                     <form method="post" action="{{ url_for('note_dose', event_id=ev.id) }}">
                         <input type="text" name="note" value="{{ ev.note }}" placeholder="Nota" style="max-width:140px;">
-                        <button type="submit" style="background:#757575;">Guardar nota</button>
+                        <button type="submit" class="btn-ghost">Guardar nota</button>
                     </form>
                 </div>
             </td>
