@@ -10,21 +10,19 @@
         <div class="card" style="background:#e8f5e9;color:#2e7d32;">{{ msg }}</div>
         {% endif %}
         {% for p in patients %}
-        <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                    <div>
+        <a href="{{ url_for('patient_detail', patient_id=p.id) }}" style="text-decoration:none; color:inherit;">
+            <div class="card" style="cursor:pointer; display:flex; gap:12px; align-items:center;">
+                <div style="width:48px; height:48px; border-radius:50%; background:#e0e0e0; flex-shrink:0;"></div>
+                <div style="flex:1;">
+                    <div style="display:flex;align-items:center;gap:6px;">
                         <strong>{{ p.name }}</strong>
                         {% set falls = fall_counts.get(p.id, 0) %}
                         {% if falls == 1 %} 🟡{% elif falls == 2 %} 🔴{% elif falls >=3 %} ⚫{% endif %}
                     </div>
                     {% if p.notes %}<div class="muted">{{ p.notes }}</div>{% endif %}
-                    <div style="margin-top:8px;">
-                        <a href="{{ url_for('patient_detail', patient_id=p.id) }}">Ver detalle</a>
-                    </div>
                 </div>
             </div>
-        </div>
+        </a>
         {% else %}
         <div class="card">No hay pacientes registrados.</div>
         {% endfor %}
