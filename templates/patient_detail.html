@@ -98,7 +98,10 @@
 
 <div class="row" style="margin-top:12px;">
     <div class="col">
-        <h3>Medicamentos</h3>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <h3 style="margin:0;">Medicamentos</h3>
+            <button id="open-med-wizard" type="button">+ Agregar medicamento</button>
+        </div>
         {% for med, events in meds_with_events %}
         <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -157,13 +160,6 @@
         {% endfor %}
     </div>
 </div>
-<div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <h3 style="margin:0;">Agregar medicamento</h3>
-      <button id="open-med-wizard" type="button">+ Agregar medicamento</button>
-    </div>
-</div>
-
 <div id="med-wizard" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.35); z-index:3000; align-items:center; justify-content:center;">
   <div style="background:white; padding:18px; border-radius:10px; width:95%; max-width:560px; max-height:90%; overflow:auto;">
     <form id="med-wizard-form" method="post" action="{{ url_for('medication_new') }}">
@@ -276,11 +272,13 @@
     const wizardNotes = document.getElementById("wizard_notes");
 
     const next1 = document.getElementById("wizard-next-1");
-    next1.addEventListener("click", ()=> {
-        if (!nameInput.value.trim()) return alert("Ingresa un nombre");
+    const goNext1 = ()=> {
+        if (!nameInput.value.trim()) { alert("Ingresa un nombre"); nameInput.focus(); return; }
         wizardName.value = nameInput.value.trim();
         showStep(1);
-    });
+        amountInput.focus();
+    };
+    next1.addEventListener("click", goNext1);
 
     const unitSelect = document.getElementById("wizard_unit");
     const amountInput = document.getElementById("wizard_amount");
@@ -310,9 +308,37 @@
     unitSelect.addEventListener("change", renderPresets);
     renderPresets();
 
-    document.getElementById("wizard-back-2").addEventListener("click", ()=> showStep(0));
+    const wizardForm = document.getElementById("med-wizard-form");
+    wizardForm.addEventListener("submit", (e)=> {
+        const currentIdx = steps.findIndex(s => s.style.display !== "none");
+        if (currentIdx !== 3) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+    });
+
+    document.addEventListener("keydown", (e)=> {
+        if (wizard.style.display === "none" || e.key !== "Enter") return;
+        if (e.target && e.target.tagName === "TEXTAREA") return;
+        if (nameInput && e.target === nameInput && nameInput.dataset.rxnormOpen === "1") return;
+        e.preventDefault();
+        e.stopPropagation();
+        const currentIdx = steps.findIndex(s => s.style.display !== "none");
+        if (currentIdx === 0) {
+            goNext1();
+        } else if (currentIdx === 1) {
+            document.getElementById("wizard-next-2").click();
+        } else if (currentIdx === 2) {
+            document.getElementById("wizard-next-3").click();
+        } else if (currentIdx === 3) {
+            document.getElementById("med-wizard-form").submit();
+        }
+    }, true);
+
+    document.getElementById("wizard-back-2").addEventListener("click", ()=> { showStep(0); nameInput.focus(); });
     document.getElementById("wizard-next-2").addEventListener("click", ()=> {
-        if (!amountInput.value.trim()) return alert("Ingresa cantidad por toma");
+        if (!amountInput.value.trim()) { alert("Ingresa cantidad por toma"); amountInput.focus(); return; }
         wizardDoseValue.value = amountInput.value.trim();
         wizardDoseUnit.value = unitSelect.value;
         wizardDoseDisplay.value = unitSelect.value === "otro" ? amountInput.value.trim() : `${amountInput.value.trim()} ${unitSelect.value}`;
@@ -333,14 +359,15 @@
             freqCustom.style.display = selectedFreq === "custom" ? "block" : "none";
         });
     });
-    document.getElementById("wizard-back-3").addEventListener("click", ()=> showStep(1));
+    document.getElementById("wizard-back-3").addEventListener("click", ()=> { showStep(1); amountInput.focus(); });
     document.getElementById("wizard-next-3").addEventListener("click", ()=> {
         let hours;
         if (selectedFreq === "custom") {
             hours = parseInt(freqInput.value,10);
-            if (!hours || hours <= 0) return alert("Ingresa horas válidas");
+            if (!hours || hours <= 0) { alert("Ingresa horas válidas"); freqInput.focus(); return; }
         } else {
             hours = parseInt(selectedFreq || "0",10);
+            if (!hours || hours <= 0) { alert("Selecciona una frecuencia"); return; }
         }
         wizardFreq.value = hours;
         const startVal = document.getElementById("wizard_start_input").value;
@@ -348,6 +375,7 @@
             wizardStart.value = startVal;
         }
         showStep(3);
+        document.getElementById("wizard_end_input").focus();
     });
 
     document.getElementById("wizard-back-4").addEventListener("click", ()=> showStep(2));

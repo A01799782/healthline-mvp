@@ -36,8 +36,10 @@
       box.innerHTML = "";
       if (!items || items.length === 0) {
         box.style.display = "none";
+        input.dataset.rxnormOpen = "0";
         return;
       }
+      input.dataset.rxnormOpen = "1";
       placeBox();
       items.forEach((item) => {
         const opt = document.createElement("div");
