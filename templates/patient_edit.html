@@ -28,5 +28,12 @@
             </a>
         </div>
     </form>
+    {% if current_role == 'CARE_ADMIN' %}
+    <div style="margin-top:16px;border-top:1px solid #eee;padding-top:12px;">
+        <form method="post" action="{{ url_for('patient_delete', patient_id=patient.id) }}" onsubmit="return confirm('¿Eliminar paciente? Esta acción no se puede deshacer.');">
+            <button type="submit" style="background:#c62828;">Eliminar paciente</button>
+        </form>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

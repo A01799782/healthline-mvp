@@ -22,7 +22,7 @@ def inject_helpers():
         except Exception:
             return value
 
-    return {"fmt_dt": fmt_dt, "now": db.now}
+    return {"fmt_dt": fmt_dt, "now": db.now, "current_role": get_current_role(request)}
 
 
 @app.route("/")

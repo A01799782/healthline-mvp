@@ -29,9 +29,6 @@
     <a href="{{ url_for('patient_today', patient_id=patient.id) }}" style="text-decoration:none;">
         <button type="button" style="background:#0d47a1;">Agenda de hoy</button>
     </a>
-    <form method="post" action="{{ url_for('patient_delete', patient_id=patient.id) }}" onsubmit="return confirm('¿Eliminar paciente y todos sus registros?');">
-        <button type="submit" style="background:#c62828;">Eliminar paciente</button>
-    </form>
 </div>
 {% if patient.notes %}<div class="muted">{{ patient.notes }}</div>{% endif %}
 {% if msg %}
