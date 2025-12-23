@@ -105,7 +105,7 @@
         {% for med, events in meds_with_events %}
         <div class="card">
             <div style="display:flex;justify-content:space-between;align-items:center;">
-                <div><strong>{{ med.name }}</strong> <span class="pill">{{ med.dose }}</span></div>
+                <div><strong>{{ med.name }}</strong> <span class="pill">{{ (med.dose_value and med.dose_unit) and (med.dose_value ~ ' ' ~ med.dose_unit) or med.dose }}</span></div>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <form method="post" action="{{ url_for('medication_toggle_active', med_id=med.id) }}">
                         {% if med.active %}
@@ -159,35 +159,207 @@
         <div class="card">Aún no hay medicamentos.</div>
         {% endfor %}
     </div>
-    <div class="col">
-        <div class="card">
-            <h3>Agregar medicamento</h3>
-            <form method="post" action="{{ url_for('medication_new') }}">
-                <input type="hidden" name="patient_id" value="{{ patient.id }}">
-                <input type="hidden" name="rxnorm_rxcui" id="rxnorm_rxcui_new">
-                <input type="hidden" name="rxnorm_name" id="rxnorm_name_new">
-                <label>Nombre</label>
-                <input type="text" name="name" id="med_name_new" required>
-                <label>Dosis</label>
-                <input type="text" name="dose" placeholder="Ej. 500mg" required>
-                <label>Frecuencia (horas)</label>
-                <input type="number" name="frequency_hours" min="1" required>
-                <label>Hora inicial</label>
-                <input type="datetime-local" name="start_time">
-                <label>Fecha/hora fin (opcional)</label>
-                <input type="datetime-local" name="end_time">
-                <label>Notas</label>
-                <textarea name="notes" rows="3" placeholder="Instrucciones adicionales (opcional)"></textarea>
-                <button type="submit">Guardar</button>
-            </form>
-        </div>
+</div>
+<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <h3 style="margin:0;">Agregar medicamento</h3>
+      <button id="open-med-wizard" type="button">+ Agregar medicamento</button>
     </div>
+</div>
+
+<div id="med-wizard" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.35); z-index:3000; align-items:center; justify-content:center;">
+  <div style="background:white; padding:18px; border-radius:10px; width:95%; max-width:560px; max-height:90%; overflow:auto;">
+    <form id="med-wizard-form" method="post" action="{{ url_for('medication_new') }}">
+      <input type="hidden" name="patient_id" value="{{ patient.id }}">
+      <input type="hidden" name="rxnorm_rxcui" id="rxnorm_rxcui_new">
+      <input type="hidden" name="rxnorm_name" id="rxnorm_name_new">
+      <input type="hidden" name="name" id="wizard_name" required>
+      <input type="hidden" name="dose" id="wizard_dose_display" required>
+      <input type="hidden" name="dose_value" id="wizard_dose_value" required>
+      <input type="hidden" name="dose_unit" id="wizard_dose_unit" required>
+      <input type="hidden" name="frequency_hours" id="wizard_freq" required>
+      <input type="hidden" name="start_time" id="wizard_start">
+      <input type="hidden" name="end_time" id="wizard_end">
+      <input type="hidden" name="notes" id="wizard_notes">
+
+      <div id="wizard-step-1" class="wizard-step">
+        <h3 style="margin-top:0;">¿Qué medicamento?</h3>
+        <label>Nombre</label>
+        <input type="text" id="med_name_new" placeholder="Ej. Ibuprofeno" required>
+        <div style="margin-top:12px;">
+          <button type="button" id="wizard-next-1">Siguiente</button>
+        </div>
+      </div>
+
+      <div id="wizard-step-2" class="wizard-step" style="display:none;">
+        <h3 style="margin-top:0;">¿En qué presentación y cuánto?</h3>
+        <label>Unidad</label>
+        <select id="wizard_unit">
+          {% set units = ["tableta","cápsula","mg","g","ml","gotas","inhalaciones","otro"] %}
+          {% for u in units %}
+          <option value="{{ u }}">{{ u }}</option>
+          {% endfor %}
+        </select>
+        <label style="margin-top:8px;">Cantidad por toma</label>
+        <input type="text" id="wizard_amount" placeholder="Ej. 1">
+        <div id="wizard_amount_presets" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"></div>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button type="button" id="wizard-back-2">Atrás</button>
+          <button type="button" id="wizard-next-2">Siguiente</button>
+        </div>
+      </div>
+
+      <div id="wizard-step-3" class="wizard-step" style="display:none;">
+        <h3 style="margin-top:0;">¿Cada cuánto y a qué hora empieza?</h3>
+        <div id="freq-presets" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+          <button type="button" class="freq-btn" data-hours="24">1 vez al día</button>
+          <button type="button" class="freq-btn" data-hours="12">2 veces al día</button>
+          <button type="button" class="freq-btn" data-hours="8">3 veces al día</button>
+          <button type="button" class="freq-btn" data-hours="6">4 veces al día</button>
+          <button type="button" class="freq-btn" data-hours="6">Cada 6 horas</button>
+          <button type="button" class="freq-btn" data-hours="8">Cada 8 horas</button>
+          <button type="button" class="freq-btn" data-hours="12">Cada 12 horas</button>
+          <button type="button" class="freq-btn" data-hours="custom">Otro</button>
+        </div>
+        <div id="wizard_freq_custom" style="display:none;margin-top:4px;">
+          <input type="number" id="wizard_freq_input" min="1" placeholder="Horas">
+        </div>
+        <label style="margin-top:8px;">Hora inicial</label>
+        <input type="datetime-local" id="wizard_start_input">
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button type="button" id="wizard-back-3">Atrás</button>
+          <button type="button" id="wizard-next-3">Siguiente</button>
+        </div>
+      </div>
+
+      <div id="wizard-step-4" class="wizard-step" style="display:none;">
+        <h3 style="margin-top:0;">¿Algo más?</h3>
+        <label>Duración (fin del tratamiento)</label>
+        <input type="datetime-local" id="wizard_end_input">
+        <label>Instrucciones</label>
+        <textarea id="wizard_notes_input" rows="3" placeholder="Notas adicionales"></textarea>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button type="button" id="wizard-back-4">Atrás</button>
+          <button type="submit">Guardar</button>
+        </div>
+      </div>
+    </form>
+    <div style="margin-top:8px;">
+      <button type="button" id="wizard-cancel" style="background:#c62828;">Cancelar</button>
+    </div>
+  </div>
 </div>
 <script>
 (function() {
-    const init = function() { window.setupRxnorm("med_name_new", "rxnorm_rxcui_new", "rxnorm_name_new"); };
-    if (window.setupRxnorm) { init(); }
-    else { window.addEventListener("load", function() { if (window.setupRxnorm) init(); }); }
+    const wizard = document.getElementById("med-wizard");
+    const openBtn = document.getElementById("open-med-wizard");
+    const cancelBtn = document.getElementById("wizard-cancel");
+    const steps = ["wizard-step-1","wizard-step-2","wizard-step-3","wizard-step-4"].map(id => document.getElementById(id));
+    const showStep = (idx) => steps.forEach((s,i)=> s.style.display = i===idx ? "block":"none");
+    const setDefaultStart = () => {
+        const now = new Date();
+        const iso = new Date(now.getTime() - now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+        const input = document.getElementById("wizard_start_input");
+        if (input && !input.value) input.value = iso;
+        wizardStart.value = input ? input.value : iso;
+    };
+    openBtn.addEventListener("click", ()=> { wizard.style.display="flex"; setDefaultStart(); showStep(0); });
+    cancelBtn.addEventListener("click", ()=> { wizard.style.display="none"; });
+
+    const nameInput = document.getElementById("med_name_new");
+    const rxId = document.getElementById("rxnorm_rxcui_new");
+    const rxName = document.getElementById("rxnorm_name_new");
+    const wizardName = document.getElementById("wizard_name");
+    const wizardDoseDisplay = document.getElementById("wizard_dose_display");
+    const wizardDoseValue = document.getElementById("wizard_dose_value");
+    const wizardDoseUnit = document.getElementById("wizard_dose_unit");
+    const wizardFreq = document.getElementById("wizard_freq");
+    const wizardStart = document.getElementById("wizard_start");
+    const wizardEnd = document.getElementById("wizard_end");
+    const wizardNotes = document.getElementById("wizard_notes");
+
+    const next1 = document.getElementById("wizard-next-1");
+    next1.addEventListener("click", ()=> {
+        if (!nameInput.value.trim()) return alert("Ingresa un nombre");
+        wizardName.value = nameInput.value.trim();
+        showStep(1);
+    });
+
+    const unitSelect = document.getElementById("wizard_unit");
+    const amountInput = document.getElementById("wizard_amount");
+    const presetsDiv = document.getElementById("wizard_amount_presets");
+    const presetMap = {
+        "tableta": ["1", "2", "0.5"],
+        "cápsula": ["1", "2"],
+        "ml": ["5", "10", "15", "20"],
+        "mg": ["100", "200", "500"],
+        "g": ["0.5", "1", "2"],
+        "gotas": ["5", "10", "15"],
+        "inhalaciones": ["1", "2"],
+        "otro": []
+    };
+    const renderPresets = () => {
+        const key = unitSelect.value;
+        const opts = presetMap[key] || [];
+        presetsDiv.innerHTML = "";
+        opts.forEach(v=>{
+            const b=document.createElement("button");
+            b.type="button";
+            b.textContent=v;
+            b.addEventListener("click", ()=> amountInput.value = v);
+            presetsDiv.appendChild(b);
+        });
+    };
+    unitSelect.addEventListener("change", renderPresets);
+    renderPresets();
+
+    document.getElementById("wizard-back-2").addEventListener("click", ()=> showStep(0));
+    document.getElementById("wizard-next-2").addEventListener("click", ()=> {
+        if (!amountInput.value.trim()) return alert("Ingresa cantidad por toma");
+        wizardDoseValue.value = amountInput.value.trim();
+        wizardDoseUnit.value = unitSelect.value;
+        wizardDoseDisplay.value = unitSelect.value === "otro" ? amountInput.value.trim() : `${amountInput.value.trim()} ${unitSelect.value}`;
+        showStep(2);
+    });
+
+    const freqButtons = document.querySelectorAll(".freq-btn");
+    const freqCustom = document.getElementById("wizard_freq_custom");
+    const freqInput = document.getElementById("wizard_freq_input");
+    let selectedFreq = null;
+    selectedFreq = (freqButtons[0] && freqButtons[0].dataset.hours) || null;
+    if (freqButtons[0]) freqButtons[0].style.background = "#e3f2fd";
+    freqButtons.forEach(btn=>{
+        btn.addEventListener("click", ()=>{
+            freqButtons.forEach(b=> b.style.background="");
+            btn.style.background="#e3f2fd";
+            selectedFreq = btn.dataset.hours;
+            freqCustom.style.display = selectedFreq === "custom" ? "block" : "none";
+        });
+    });
+    document.getElementById("wizard-back-3").addEventListener("click", ()=> showStep(1));
+    document.getElementById("wizard-next-3").addEventListener("click", ()=> {
+        let hours;
+        if (selectedFreq === "custom") {
+            hours = parseInt(freqInput.value,10);
+            if (!hours || hours <= 0) return alert("Ingresa horas válidas");
+        } else {
+            hours = parseInt(selectedFreq || "0",10);
+        }
+        wizardFreq.value = hours;
+        const startVal = document.getElementById("wizard_start_input").value;
+        if (startVal) {
+            wizardStart.value = startVal;
+        }
+        showStep(3);
+    });
+
+    document.getElementById("wizard-back-4").addEventListener("click", ()=> showStep(2));
+    document.getElementById("wizard_end_input").addEventListener("change", (e)=> wizardEnd.value = e.target.value);
+    document.getElementById("wizard_notes_input").addEventListener("input", (e)=> wizardNotes.value = e.target.value);
+
+    const initRx = function() { window.setupRxnorm("med_name_new", "rxnorm_rxcui_new", "rxnorm_name_new"); };
+    if (window.setupRxnorm) { initRx(); }
+    else { window.addEventListener("load", function() { if (window.setupRxnorm) initRx(); }); }
 })();
 </script>
 {% endblock %}

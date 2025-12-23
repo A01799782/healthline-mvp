@@ -9,8 +9,16 @@
         <input type="hidden" name="rxnorm_name" id="rxnorm_name_edit" value="{{ med.rxnorm_name }}">
         <label>Nombre</label>
         <input type="text" name="name" id="med_name_edit" value="{{ med.name }}" required>
-        <label>Dosis</label>
-        <input type="text" name="dose" value="{{ med.dose }}" required>
+        <label>Cantidad por toma</label>
+        <input type="text" name="dose_value" value="{{ med.dose_value or med.dose or '' }}" required>
+        <label>Unidad</label>
+        <select name="dose_unit">
+            {% set units = ["tableta","cápsula","mg","g","ml","gotas","inhalaciones","otro"] %}
+            {% set current_unit = med.dose_unit or "otro" %}
+            {% for u in units %}
+            <option value="{{ u }}" {% if u==current_unit %}selected{% endif %}>{{ u }}</option>
+            {% endfor %}
+        </select>
         <label>Frecuencia (horas)</label>
         <input type="number" name="frequency_hours" min="1" value="{{ med.frequency_hours }}" required>
         <label>Hora inicial</label>

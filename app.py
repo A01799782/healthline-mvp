@@ -122,7 +122,9 @@ def patient_detail(patient_id: int):
 def medication_new():
     patient_id = int(request.form.get("patient_id"))
     name = request.form.get("name", "").strip()
-    dose = request.form.get("dose", "").strip()
+    dose_value = request.form.get("dose_value", "").strip()
+    dose_unit = request.form.get("dose_unit", "").strip()
+    dose = f"{dose_value} {dose_unit}".strip() if dose_unit and dose_unit != "otro" else dose_value
     freq = request.form.get("frequency_hours", "0").strip()
     notes = request.form.get("notes", "").strip() or None
     start_time_raw = request.form.get("start_time", "").strip()
@@ -158,6 +160,8 @@ def medication_new():
         end_time=end_time,
         rxnorm_rxcui=rxnorm_rxcui,
         rxnorm_name=rxnorm_name or name,
+        dose_value=dose_value or None,
+        dose_unit=dose_unit or None,
     )
     db.log_audit(
         "create_medication",
@@ -170,6 +174,8 @@ def medication_new():
             "has_end_time": bool(end_time),
             "rxnorm_selected": bool(rxnorm_rxcui),
             "rxnorm_rxcui": rxnorm_rxcui,
+            "dose_unit": dose_unit or None,
+            "dose_value": dose_value or None,
         },
     )
     return redirect(url_for("patient_detail", patient_id=patient_id))
@@ -186,6 +192,11 @@ def alerts():
         ev["status"] = status_data["status"]
         ev["_order_bucket"] = status_data["order_bucket"]
         ev["_order_time"] = status_data["sched_dt"]
+        ev["display_dose"] = (
+            f"{ev.get('medication_dose_value')} {ev.get('medication_dose_unit')}".strip()
+            if ev.get("medication_dose_value") and ev.get("medication_dose_unit")
+            else ev.get("medication_dose")
+        )
         enriched.append(ev)
     enriched.sort(key=lambda e: (e["_order_bucket"], e["_order_time"]))
     patient_names = db.get_patient_names()
@@ -216,6 +227,11 @@ def patient_today(patient_id: int):
         ev["_order_bucket"] = status_data["order_bucket"]
         ev["_order_time"] = status_data["sched_dt"]
         ev["_hour_label"] = status_data["hour_label"]
+        ev["display_dose"] = (
+            f"{ev.get('medication_dose_value')} {ev.get('medication_dose_unit')}".strip()
+            if ev.get("medication_dose_value") and ev.get("medication_dose_unit")
+            else ev.get("medication_dose")
+        )
         enriched.append(ev)
     enriched.sort(key=lambda e: (e["_order_bucket"], e["_order_time"]))
     # group by hour label preserving order
@@ -410,6 +426,10 @@ def medication_edit(med_id: int):
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         dose = request.form.get("dose", "").strip()
+        dose_value = request.form.get("dose_value", "").strip()
+        dose_unit = request.form.get("dose_unit", "").strip()
+        if dose_value and dose_unit and dose_unit != "otro":
+            dose = f"{dose_value} {dose_unit}".strip()
         freq_raw = request.form.get("frequency_hours", "").strip()
         notes = request.form.get("notes", "").strip() or None
         start_raw = request.form.get("start_time", "").strip()
@@ -441,21 +461,36 @@ def medication_edit(med_id: int):
                 error = error or "Formato de hora fin inválido."
         if error:
             return render_template("medication_edit.html", med=med, patient_id=patient_id, error=error)
-        db.update_medication(med_id, name, dose, frequency_hours, notes, start_time, end_time, active=med.get("active"), rxnorm_rxcui=rxnorm_rxcui, rxnorm_name=rxnorm_name or name)
+        db.update_medication(
+            med_id,
+            name,
+            dose,
+            frequency_hours,
+            notes,
+            start_time,
+            end_time,
+            active=med.get("active"),
+            rxnorm_rxcui=rxnorm_rxcui,
+            rxnorm_name=rxnorm_name or name,
+            dose_value=dose_value or None,
+            dose_unit=dose_unit or None,
+        )
         db.reset_future_events(med_id, seed_time=start_time)
         db.log_audit(
             "update_medication",
             "medication",
             med_id,
             get_current_role(request),
-            {
-                "patient_id": patient_id,
-                "frequency_hours": frequency_hours,
-                "has_end_time": bool(end_time),
-                "rxnorm_selected": bool(rxnorm_rxcui),
-                "rxnorm_rxcui": rxnorm_rxcui,
-            },
-        )
+        {
+            "patient_id": patient_id,
+            "frequency_hours": frequency_hours,
+            "has_end_time": bool(end_time),
+            "rxnorm_selected": bool(rxnorm_rxcui),
+            "rxnorm_rxcui": rxnorm_rxcui,
+            "dose_unit": dose_unit or None,
+            "dose_value": dose_value or None,
+        },
+    )
         return redirect(url_for("patient_detail", patient_id=patient_id))
     return render_template("medication_edit.html", med=med, patient_id=patient_id, error=None)
 

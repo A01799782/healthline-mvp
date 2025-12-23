@@ -33,7 +33,7 @@
         <tr>
             <td>{{ ev.patient_name }}</td>
             <td>{{ ev.medication_name }}</td>
-            <td>{{ ev.medication_dose }}</td>
+            <td>{{ ev.display_dose or ev.medication_dose }}</td>
             <td>{{ fmt_dt(ev.scheduled_time) }}</td>
             <td>
                 {% if ev.status == 'Omitida' %}

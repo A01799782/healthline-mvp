@@ -13,6 +13,36 @@ def now() -> datetime:
     return datetime.now() + timedelta(minutes=OFFSET_MINUTES)
 
 
+def _parse_dose_text(dose: str):
+    if not dose:
+        return None, None
+    text = dose.lower().strip()
+    parts = text.split()
+    if len(parts) < 2:
+        return None, None
+    value = parts[0]
+    unit = parts[1]
+    known_units = {
+        "tableta": "tableta",
+        "tabletas": "tableta",
+        "cápsula": "cápsula",
+        "capsula": "cápsula",
+        "cápsulas": "cápsula",
+        "capsulas": "cápsula",
+        "mg": "mg",
+        "ml": "ml",
+        "mL": "ml",
+        "gotas": "gotas",
+        "gota": "gotas",
+        "puff": "puff",
+        "puffs": "puff",
+    }
+    unit_norm = known_units.get(unit)
+    if unit_norm:
+        return value, unit_norm
+    return None, None
+
+
 def _dict_factory(cursor, row):
     return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
 
@@ -109,6 +139,7 @@ def init_db():
         _ensure_medication_columns(cur)
         _ensure_patient_columns(cur)
         _ensure_dose_event_columns(cur)
+        _backfill_medication_dose_fields(cur)
 
 
 def _ensure_medication_columns(cur):
@@ -124,6 +155,10 @@ def _ensure_medication_columns(cur):
         cur.execute("ALTER TABLE medication ADD COLUMN rxnorm_rxcui TEXT")
     if "rxnorm_name" not in cols:
         cur.execute("ALTER TABLE medication ADD COLUMN rxnorm_name TEXT")
+    if "dose_value" not in cols:
+        cur.execute("ALTER TABLE medication ADD COLUMN dose_value TEXT")
+    if "dose_unit" not in cols:
+        cur.execute("ALTER TABLE medication ADD COLUMN dose_unit TEXT")
 
 
 def _ensure_patient_columns(cur):
@@ -149,6 +184,20 @@ def _ensure_dose_event_columns(cur):
         cur.execute("ALTER TABLE dose_event ADD COLUMN skipped INTEGER NOT NULL DEFAULT 0")
     if "note" not in cols:
         cur.execute("ALTER TABLE dose_event ADD COLUMN note TEXT")
+
+
+def _backfill_medication_dose_fields(cur):
+    cur.execute("SELECT id, dose, dose_value, dose_unit FROM medication")
+    rows = cur.fetchall()
+    for row in rows:
+        if row.get("dose_value") or row.get("dose_unit"):
+            continue
+        value, unit = _parse_dose_text(row.get("dose") or "")
+        if value or unit:
+            cur.execute(
+                "UPDATE medication SET dose_value = ?, dose_unit = ? WHERE id = ?",
+                (value, unit, row["id"]),
+            )
 
 
 def get_adherence_summary(patient_id: int, start_iso: str, end_iso: str, now_iso: str):
@@ -297,12 +346,14 @@ def add_medication(
     active: int = 1,
     rxnorm_rxcui: str | None = None,
     rxnorm_name: str | None = None,
+    dose_value: str | None = None,
+    dose_unit: str | None = None,
 ):
     with db_cursor() as cur:
         cur.execute(
             """
-            INSERT INTO medication (patient_id, name, dose, frequency_hours, notes, end_time, start_time, active, rxnorm_rxcui, rxnorm_name)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO medication (patient_id, name, dose, frequency_hours, notes, end_time, start_time, active, rxnorm_rxcui, rxnorm_name, dose_value, dose_unit)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 patient_id,
@@ -315,6 +366,8 @@ def add_medication(
                 active,
                 rxnorm_rxcui,
                 rxnorm_name,
+                dose_value,
+                dose_unit,
             ),
         )
         medication_id = cur.lastrowid
@@ -348,6 +401,8 @@ def update_medication(
     active: int | None = None,
     rxnorm_rxcui: str | None = None,
     rxnorm_name: str | None = None,
+    dose_value: str | None = None,
+    dose_unit: str | None = None,
 ):
     with db_cursor() as cur:
         fields = [
@@ -362,6 +417,8 @@ def update_medication(
             fields.append(("active", active))
         fields.append(("rxnorm_rxcui", rxnorm_rxcui))
         fields.append(("rxnorm_name", rxnorm_name))
+        fields.append(("dose_value", dose_value))
+        fields.append(("dose_unit", dose_unit))
         set_clause = ", ".join(f"{f[0]} = ?" for f in fields)
         values = [f[1] for f in fields]
         values.append(medication_id)
@@ -452,6 +509,7 @@ def list_upcoming_dose_events(limit: int = 50, patient_name: str | None = None):
     with db_cursor() as cur:
         query = """
             SELECT de.*, m.name AS medication_name, m.dose AS medication_dose, m.frequency_hours,
+                   m.dose_value AS medication_dose_value, m.dose_unit AS medication_dose_unit,
                    p.name AS patient_name
             FROM dose_event de
             JOIN medication m ON de.medication_id = m.id
@@ -808,6 +866,7 @@ def list_patient_events_for_day(patient_id: int, day_start_iso: str, day_end_iso
         cur.execute(
             """
             SELECT de.*, m.name AS medication_name, m.dose AS medication_dose, m.frequency_hours,
+                   m.dose_value AS medication_dose_value, m.dose_unit AS medication_dose_unit,
                    p.name AS patient_name
             FROM dose_event de
             JOIN medication m ON de.medication_id = m.id

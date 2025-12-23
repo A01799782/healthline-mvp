@@ -22,7 +22,7 @@
                     <tr>
                         <td>{{ fmt_dt(ev.scheduled_time) }}</td>
                         <td>{{ ev.medication_name }}</td>
-                        <td>{{ ev.medication_dose }}</td>
+                        <td>{{ ev.display_dose or ev.medication_dose }}</td>
                         <td>
                             {% if ev.status == 'Omitida' %}
                                 <span class="pill" style="background:#ffe0b2;color:#e65100;">Omitida</span>

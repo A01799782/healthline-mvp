@@ -18,7 +18,7 @@
     box.style.position = "absolute";
     box.style.background = "white";
     box.style.border = "1px solid #ccc";
-    box.style.zIndex = 1000;
+    box.style.zIndex = 4000;
     box.style.display = "none";
     box.style.maxHeight = "180px";
     box.style.overflowY = "auto";
