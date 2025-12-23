@@ -509,7 +509,7 @@ def ensure_next_dose_event(medication_id: int):
             _insert_dose_event(cur, medication_id, next_time)
 
 
-def list_upcoming_dose_events(limit: int = 50, patient_name: str | None = None):
+def list_upcoming_dose_events(limit: int = 50, patient_name: str | None = None, lookback_sql: str | None = None):
     now_ts = to_db_timestamp(now())
     filter_name = (patient_name or "").strip()
     clauses = []
@@ -517,15 +517,17 @@ def list_upcoming_dose_events(limit: int = 50, patient_name: str | None = None):
     if filter_name:
         clauses.append("LOWER(p.name) LIKE LOWER(?)")
         params.append(f"%{filter_name}%")
+    allowed_lookbacks = {"-1 day", "-3 day", "-7 day", "-30 day"}
+    lb = lookback_sql if lookback_sql in allowed_lookbacks else "-1 day"
     with db_cursor() as cur:
-        query = """
+        query = f"""
             SELECT de.*, m.name AS medication_name, m.dose AS medication_dose, m.frequency_hours,
                    m.dose_value AS medication_dose_value, m.dose_unit AS medication_dose_unit,
                    p.name AS patient_name, p.id AS patient_id
             FROM dose_event de
             JOIN medication m ON de.medication_id = m.id
             JOIN patient p ON m.patient_id = p.id
-            WHERE datetime(de.scheduled_time) >= datetime(?, '-1 day')
+            WHERE datetime(de.scheduled_time) >= datetime(?, '{lb}')
         """
         if clauses:
             query += " AND " + " AND ".join(clauses)

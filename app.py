@@ -234,7 +234,11 @@ def medication_new():
 @app.route("/alerts")
 def alerts():
     patient_name = request.args.get("patient_name", "").strip()
-    events = db.list_upcoming_dose_events(patient_name=patient_name if patient_name else None)
+    window_param = request.args.get("w", "24h")
+    status_param = request.args.get("s", "all")
+    window_map = {"24h": "-1 day", "72h": "-3 day", "7d": "-7 day", "30d": "-30 day"}
+    lookback = window_map.get(window_param, "-1 day")
+    events = db.list_upcoming_dose_events(patient_name=patient_name if patient_name else None, lookback_sql=lookback)
     current_time = db.now()
     enriched = []
     for ev in events:
@@ -247,10 +251,24 @@ def alerts():
             if ev.get("medication_dose_value") and ev.get("medication_dose_unit")
             else ev.get("medication_dose")
         )
+        # status filter
+        if status_param == "pending_only":
+            if ev["status"] not in ["Próxima", "Vencida"]:
+                continue
+        elif status_param == "overdue_only":
+            if ev["status"] != "Vencida":
+                continue
         enriched.append(ev)
     enriched.sort(key=lambda e: (e["_order_bucket"], e["_order_time"]))
     patient_names = db.get_patient_names()
-    return render_template("alerts.html", events=enriched, patient_name=patient_name, patient_names=patient_names)
+    return render_template(
+        "alerts.html",
+        events=enriched,
+        patient_name=patient_name,
+        patient_names=patient_names,
+        window_param=window_param,
+        status_param=status_param,
+    )
 
 
 @app.route("/api/rxnorm/suggest")
