@@ -4,9 +4,20 @@
 <div class="card" style="margin-top:12px;">
     <h2>Editar paciente</h2>
     {% if error %}<div style="color:#c62828;">{{ error }}</div>{% endif %}
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         <label>Nombre</label>
         <input type="text" name="name" value="{{ patient.name }}" required>
+        <label>Foto (opcional)</label>
+        <input type="file" name="photo" id="patient_photo_edit" accept="image/*">
+        <div style="margin:8px 0; display:flex; align-items:center; gap:8px;">
+            <div style="width:64px; height:64px; border-radius:50%; background:#e0e0e0; overflow:hidden;">
+                {% if patient.photo_path %}
+                <img id="patient_photo_preview_edit" src="{{ url_for('static', filename=patient.photo_path) }}" alt="avatar" style="width:100%; height:100%; object-fit:cover;">
+                {% else %}
+                <img id="patient_photo_preview_edit" src="" alt="" style="width:100%; height:100%; object-fit:cover; display:none;">
+                {% endif %}
+            </div>
+        </div>
         <label>Fecha de nacimiento</label>
         <input type="date" name="date_of_birth" value="{{ patient.date_of_birth }}">
         <label>Diagnóstico</label>
@@ -36,4 +47,20 @@
     </div>
     {% endif %}
 </div>
+<script>
+(function(){
+    const input = document.getElementById("patient_photo_edit");
+    const preview = document.getElementById("patient_photo_preview_edit");
+    if (input) {
+        input.addEventListener("change", (e)=>{
+            const file = e.target.files && e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                preview.src = url;
+                preview.style.display = "block";
+            }
+        });
+    }
+})();
+</script>
 {% endblock %}

@@ -12,7 +12,11 @@
         {% for p in patients %}
         <a href="{{ url_for('patient_detail', patient_id=p.id) }}" style="text-decoration:none; color:inherit;">
             <div class="card" style="cursor:pointer; display:flex; gap:12px; align-items:center;">
-                <div style="width:48px; height:48px; border-radius:50%; background:#e0e0e0; flex-shrink:0;"></div>
+                <div style="width:48px; height:48px; border-radius:50%; background:#e0e0e0; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+                    {% if p.photo_path %}
+                    <img src="{{ url_for('static', filename=p.photo_path) }}" alt="avatar" style="width:100%; height:100%; object-fit:cover;">
+                    {% endif %}
+                </div>
                 <div style="flex:1;">
                     <div style="display:flex;align-items:center;gap:6px;">
                         <strong>{{ p.name }}</strong>
@@ -32,9 +36,16 @@
 <div id="patient-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.35); z-index:3000; align-items:center; justify-content:center;">
   <div style="background:white; padding:16px; border-radius:8px; width:95%; max-width:520px; max-height:90%; overflow:auto;">
     <h3>Agregar paciente</h3>
-    <form method="post" action="{{ url_for('patient_new') }}">
+    <form method="post" action="{{ url_for('patient_new') }}" enctype="multipart/form-data">
         <label>Nombre</label>
         <input type="text" name="name" required>
+        <label>Foto (opcional)</label>
+        <input type="file" name="photo" id="patient_photo_input" accept="image/*">
+        <div style="margin:8px 0; display:flex; align-items:center; gap:8px;">
+            <div style="width:48px; height:48px; border-radius:50%; background:#e0e0e0; overflow:hidden;">
+                <img id="patient_photo_preview" src="" alt="" style="width:100%; height:100%; object-fit:cover; display:none;">
+            </div>
+        </div>
         <label>Fecha de nacimiento</label>
         <input type="date" name="date_of_birth">
         <label>Diagnóstico</label>
@@ -70,6 +81,21 @@
     document.addEventListener("click", (e)=>{
         if (e.target === modal) modal.style.display="none";
     });
+    const photoInput = document.getElementById("patient_photo_input");
+    const photoPreview = document.getElementById("patient_photo_preview");
+    if (photoInput) {
+        photoInput.addEventListener("change", (e)=>{
+            const file = e.target.files && e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                photoPreview.src = url;
+                photoPreview.style.display = "block";
+            } else {
+                photoPreview.src = "";
+                photoPreview.style.display = "none";
+            }
+        });
+    }
 })();
 </script>
 {% endblock %}

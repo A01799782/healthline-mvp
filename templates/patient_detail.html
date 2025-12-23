@@ -22,6 +22,11 @@
 
 <a href="{{ url_for('patient_list') }}">&larr; Volver</a>
 <div style="display:flex;align-items:center;gap:12px;">
+    <div style="width:56px;height:56px;border-radius:50%;background:#e0e0e0;overflow:hidden;flex-shrink:0;">
+        {% if patient.photo_path %}
+        <img src="{{ url_for('static', filename=patient.photo_path) }}" alt="avatar" style="width:100%;height:100%;object-fit:cover;">
+        {% endif %}
+    </div>
     <h2 style="margin:0;">{{ patient.name }}</h2>
     <a href="{{ url_for('patient_edit', patient_id=patient.id) }}" style="text-decoration:none;">
         <button type="button">Editar</button>

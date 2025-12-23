@@ -175,6 +175,8 @@ def _ensure_patient_columns(cur):
     for name, col_type in to_add:
         if name not in cols:
             cur.execute(f"ALTER TABLE patient ADD COLUMN {name} {col_type}")
+    if "photo_path" not in cols:
+        cur.execute("ALTER TABLE patient ADD COLUMN photo_path TEXT")
 
 
 def _ensure_dose_event_columns(cur):
@@ -268,13 +270,14 @@ def add_patient(
     emergency_contact_name: str | None = None,
     emergency_contact_phone: str | None = None,
     emergency_contact_relation: str | None = None,
+    photo_path: str | None = None,
 ):
     with db_cursor() as cur:
         cur.execute(
             """
             INSERT INTO patient (name, notes, date_of_birth, diagnosis, allergies,
-                                 emergency_contact_name, emergency_contact_phone, emergency_contact_relation)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                 emergency_contact_name, emergency_contact_phone, emergency_contact_relation, photo_path)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 name,
@@ -285,6 +288,7 @@ def add_patient(
                 emergency_contact_name,
                 emergency_contact_phone,
                 emergency_contact_relation,
+                photo_path,
             ),
         )
         return cur.lastrowid
@@ -312,13 +316,14 @@ def update_patient(
     emergency_contact_name: str | None = None,
     emergency_contact_phone: str | None = None,
     emergency_contact_relation: str | None = None,
+    photo_path: str | None = None,
 ):
     with db_cursor() as cur:
         cur.execute(
             """
             UPDATE patient
             SET name = ?, notes = ?, date_of_birth = ?, diagnosis = ?, allergies = ?,
-                emergency_contact_name = ?, emergency_contact_phone = ?, emergency_contact_relation = ?
+                emergency_contact_name = ?, emergency_contact_phone = ?, emergency_contact_relation = ?, photo_path = COALESCE(?, photo_path)
             WHERE id = ?
             """,
             (
@@ -330,6 +335,7 @@ def update_patient(
                 emergency_contact_name,
                 emergency_contact_phone,
                 emergency_contact_relation,
+                photo_path,
                 patient_id,
             ),
         )

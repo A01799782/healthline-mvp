@@ -1,16 +1,60 @@
+import os
+import uuid
+import json
 from datetime import datetime, timedelta
 from flask import Flask, redirect, render_template, request, url_for
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 import db
 from services.dose_status import compute_event_status
 from services.rxnorm import fetch_suggestions
 from authz import CARE_ADMIN, NURSE, get_current_role, require_roles
-import json
 
 app = Flask(__name__)
 
 
 db.init_db()
+
+UPLOAD_DIR = os.path.join(app.root_path, "static", "uploads", "patients")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+def save_patient_photo(file_storage, old_path: str | None = None):
+    if Image is None:
+        return None
+    allowed = {"jpg", "jpeg", "png", "webp"}
+    filename = file_storage.filename or ""
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if ext not in allowed:
+        return None
+    file_storage.stream.seek(0, os.SEEK_END)
+    size = file_storage.stream.tell()
+    if size > 5 * 1024 * 1024:
+        return None
+    file_storage.stream.seek(0)
+    try:
+        img = Image.open(file_storage.stream)
+        img = img.convert("RGB")
+        w, h = img.size
+        m = min(w, h)
+        left = (w - m) // 2
+        top = (h - m) // 2
+        img = img.crop((left, top, left + m, top + m))
+        img = img.resize((256, 256))
+        filename = f"{uuid.uuid4().hex}.jpg"
+        path = os.path.join(UPLOAD_DIR, filename)
+        img.save(path, format="JPEG", quality=85)
+        if old_path:
+            try:
+                os.remove(os.path.join(app.root_path, "static", old_path))
+            except Exception:
+                pass
+        return f"uploads/patients/{filename}"
+    except Exception:
+        return None
 
 
 @app.context_processor
@@ -46,6 +90,11 @@ def patient_new():
         ec_name = request.form.get("emergency_contact_name", "").strip() or None
         ec_phone = request.form.get("emergency_contact_phone", "").strip() or None
         ec_relation = request.form.get("emergency_contact_relation", "").strip() or None
+        photo_path = None
+        if "photo" in request.files:
+            photo_file = request.files["photo"]
+            if photo_file and photo_file.filename:
+                photo_path = save_patient_photo(photo_file)
         if name:
             pid = db.add_patient(
                 name,
@@ -56,6 +105,7 @@ def patient_new():
                 emergency_contact_name=ec_name,
                 emergency_contact_phone=ec_phone,
                 emergency_contact_relation=ec_relation,
+                photo_path=photo_path,
             )
             db.log_audit(
                 "create_patient",
@@ -350,6 +400,11 @@ def patient_edit(patient_id: int):
         ec_name = request.form.get("emergency_contact_name", "").strip() or None
         ec_phone = request.form.get("emergency_contact_phone", "").strip() or None
         ec_relation = request.form.get("emergency_contact_relation", "").strip() or None
+        photo_path = None
+        if "photo" in request.files:
+            photo_file = request.files["photo"]
+            if photo_file and photo_file.filename:
+                photo_path = save_patient_photo(photo_file, old_path=patient.get("photo_path"))
         if not name:
             return render_template("patient_edit.html", patient=patient, error="El nombre es obligatorio.")
         db.update_patient(
@@ -362,6 +417,7 @@ def patient_edit(patient_id: int):
             emergency_contact_name=ec_name,
             emergency_contact_phone=ec_phone,
             emergency_contact_relation=ec_relation,
+            photo_path=photo_path,
         )
         db.log_audit("update_patient", "patient", patient_id, get_current_role(request), {"has_notes": bool(notes)})
         return redirect(url_for("patient_detail", patient_id=patient_id))
