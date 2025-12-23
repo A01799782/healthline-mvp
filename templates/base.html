@@ -5,47 +5,85 @@
     <title>Healthline MVP</title>
     <style>
         :root {
-            --bg-app: #f6f7fb;
+            --bg-app: #f4f5f7;
             --bg-card: #ffffff;
-            --border: #e5e7eb;
+            --border: #e3e6ec;
             --text: #1f2933;
             --text-muted: #6b7280;
-            --accent: #2f6ff9;
-            --accent-hover: #1f5ed8;
+            --accent: #3662ec;
+            --accent-hover: #2d55cf;
             --danger: #c62828;
-            --success: #1b5e20;
-            --shadow: 0 1px 4px rgba(0,0,0,0.06);
+            --success: #166534;
+            --warn: #b45309;
+            --shadow: 0 1px 3px rgba(0,0,0,0.05);
+            --shadow-hover: 0 8px 24px rgba(0,0,0,0.12);
+            --radius: 16px;
+            --space-1: 8px;
+            --space-2: 12px;
+            --space-3: 16px;
+            --space-4: 24px;
+            --space-5: 32px;
         }
         * { box-sizing: border-box; }
         body { margin:0; padding:0; background:var(--bg-app); color:var(--text); font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        header { background:#fcfcfd; color:var(--text); border-bottom:1px solid var(--border); padding:12px 0; }
-        nav { display:flex; gap:12px; align-items:center; max-width:960px; margin:0 auto; padding:0 16px; }
-        nav a { color:var(--text); text-decoration:none; padding:6px 8px; border-radius:10px; font-weight:600; border:1px solid transparent; transition: all 0.15s ease; }
-        nav a:hover { border-color: var(--border); }
-        .container { padding: 16px; max-width: 960px; margin: 0 auto; }
-        .card { background: var(--bg-card); padding: 16px; border-radius: 16px; box-shadow: var(--shadow); border:1px solid var(--border); margin-bottom: 12px; }
-        form label { display: block; margin-top: 10px; font-weight:600; color:var(--text); }
-        form input, form textarea, form select { width: 100%; padding: 10px; margin-top: 4px; border-radius: 10px; border:1px solid var(--border); background:#f9fafb; font-size:14px; color:var(--text); }
+        header { background:#fbfbfd; color:var(--text); border-bottom:1px solid var(--border); padding:var(--space-2) 0; position:sticky; top:0; z-index:100; }
+        nav { display:flex; gap:12px; align-items:center; max-width:1040px; margin:0 auto; padding:0 var(--space-3); }
+        nav a { color:var(--text); text-decoration:none; padding:8px 10px; border-radius:12px; font-weight:600; border:1px solid transparent; transition: all 0.15s ease; }
+        nav a:hover { border-color: var(--border); background:#f5f6fa; }
+        .container { padding: var(--space-3); max-width: 1040px; margin: 0 auto; }
+        .card { background: var(--bg-card); padding: var(--space-3); border-radius: var(--radius); box-shadow: var(--shadow); border:1px solid var(--border); margin-bottom: var(--space-2); transition: box-shadow 0.16s ease, border-color 0.16s ease, transform 0.12s ease; }
+        .card:hover { box-shadow: var(--shadow-hover); border-color:#cfd4df; transform: translateY(-2px); }
+        form label { display: block; margin-top: var(--space-2); font-weight:600; color:var(--text); }
+        form input, form textarea, form select { width: 100%; padding: 10px; margin-top: 4px; border-radius: 12px; border:1px solid var(--border); background:#f8f9fb; font-size:14px; color:var(--text); }
         form textarea { resize: vertical; }
-        form input:focus, form textarea:focus, form select:focus { outline: 2px solid rgba(47,111,249,0.25); border-color: var(--accent); background:#fff; }
+        form input:focus, form textarea:focus, form select:focus { outline: 2px solid rgba(54,98,236,0.18); border-color: var(--accent); background:#fff; }
         button { padding: 10px 14px; margin-top: 8px; cursor: pointer; border: none; background: var(--accent); color: white; border-radius: 12px; font-weight:600; transition: all 0.15s ease; }
         button:hover { background: var(--accent-hover); }
+        .btn-sm { padding: 8px 10px; font-size:13px; }
         .btn-ghost { background: transparent; color: var(--text); border:1px solid var(--border); }
         .btn-danger { background: var(--danger); color: #fff; }
+        .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-outline { background: transparent; color: var(--text); border:1px solid var(--border); }
         .muted { color: var(--text-muted); }
-        .pill { display: inline-block; padding: 4px 10px; border-radius: 12px; background: #eef2ff; color: #1d4ed8; font-size: 12px; border:1px solid #e0e7ff; }
-        .row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
         .row .col { flex: 1; min-width: 280px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 10px; border-bottom: 1px solid var(--border); text-align: left; font-size:14px; }
         th { color: var(--text-muted); font-weight:700; background:#f9fafb; }
         tr:hover td { background:#f7f8fb; }
         a { color: var(--accent); }
-        .pill-success { background:#e8f5e9; color:#1b5e20; border:1px solid #c8e6c9; }
-        .pill-warn { background:#fff7d6; color:#8a6d3b; border:1px solid #ffe8a3; }
-        .pill-danger { background:#ffe4e0; color:#b42318; border:1px solid #ffc7be; }
-        .pill-info { background:#e3f2fd; color:#0d47a1; border:1px solid #cfe2ff; }
         .link-plain { text-decoration:none; color:inherit; }
+        .btn-primary { background: var(--accent); color: #fff; border:none; padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600; transition:all 0.15s ease; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-ghost { background: transparent; color: var(--text); border:1px solid var(--border); padding:10px 12px; border-radius:12px; cursor:pointer; font-weight:600; }
+        .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .badge { display:inline-flex; align-items:center; padding:4px 10px; border-radius:12px; border:1px solid var(--border); font-size:12px; font-weight:600; }
+        .progress { width:100%; height:8px; border-radius:999px; background:#edf0f5; overflow:hidden; }
+        .progress-fill { height:100%; border-radius:999px; background: var(--accent); transition: width 0.25s ease; }
+        .table-clean { width:100%; border-collapse: collapse; }
+        .table-clean th, .table-clean td { padding:12px 10px; border-bottom:1px solid var(--border); text-align:left; font-size:14px; }
+        .table-clean th { color:var(--text-muted); font-weight:700; background:#f9fafb; }
+        .table-clean tr:hover td { background:#f7f8fb; }
+        .table-card { padding:0; overflow:hidden; }
+        .table-card table { margin:0; }
+        .hover-row tbody tr { transition: background 0.12s ease, box-shadow 0.12s ease; }
+        .hover-row tbody tr:hover td { background:#f8fafc; }
+        .pill { display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; border:1px solid var(--border); font-size:12px; font-weight:600; }
+        .pill-gray { background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; }
+        .state { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px; font-size:12px; font-weight:700; border:1px solid transparent; }
+        .state-vencida { background:#fff1f0; color:#b42318; border-color:#ffc7be; }
+        .state-proxima { background:#eef2ff; color:#1e3a8a; border-color:#d7e3ff; }
+        .state-omitida { background:#fff7e6; color:#8a6d3b; border-color:#ffe8c2; }
+        .state-tomada { background:#e6f4ed; color:#166534; border-color:#c9e7d9; }
+        .avatar { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#eceff3,#dfe3eb); overflow:hidden; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#374151; }
+        .avatar img { width:100%; height:100%; object-fit:cover; }
+        .pill-note { background:#eef2ff; color:#4338ca; border:1px solid #e0e7ff; }
+        .pill-small { padding:3px 8px; font-size:12px; border-radius:999px; border:1px solid var(--border); }
+        .section-head { display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); flex-wrap:wrap; }
+        .section-title { margin:0; font-size:20px; font-weight:700; }
+        .fade-in { animation: fadeIn 0.18s ease; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(2px);} to { opacity:1; transform:none;} }
     </style>
 </head>
 <body>

@@ -1,65 +1,158 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+  .section-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .note-modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.35); display:none; align-items:center; justify-content:center; z-index:3500; }
+  .note-modal { background:#fff; padding:16px; border-radius:12px; box-shadow:0 12px 32px rgba(0,0,0,0.16); width:95%; max-width:420px; }
+  .time-col { display:flex; flex-direction:column; gap:2px; }
+  .time-main { font-weight:700; }
+  .time-sub { color:var(--text-muted); font-size:12px; }
+  .action-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .note-indicator { width:6px; height:6px; border-radius:50%; background:#4338ca; display:inline-block; }
+  .row-hover tbody tr { transition: background 0.15s ease, box-shadow 0.15s ease; }
+  .row-hover tbody tr:hover td { background:#f8fafc; }
+</style>
+
 <a href="{{ url_for('patient_detail', patient_id=patient.id) }}" class="link-plain">&larr; Volver</a>
 <div class="card" style="margin-top:12px;">
-    <h2 style="margin-top:0;">Agenda de hoy - {{ patient.name }}</h2>
+    <div class="section-head">
+        <h2 style="margin:0;">Agenda de hoy - {{ patient.name }}</h2>
+        <div class="legend" style="font-size:12px; color:var(--text-muted); gap:10px; display:flex; flex-wrap:wrap;">
+            <span class="state state-vencida">Vencida</span>
+            <span class="state state-proxima">Próxima</span>
+            <span class="state state-omitida">Omitida</span>
+            <span class="state state-tomada">Tomada</span>
+        </div>
+    </div>
     {% if grouped_events|length == 0 %}
-        <div class="muted">Sin eventos para hoy.</div>
+        <div class="muted" style="margin-top:8px;">Sin eventos para hoy.</div>
     {% else %}
         {% for group in grouped_events %}
-            <div style="margin-bottom:12px;">
-                <div class="pill" style="background:#eceff1;color:#37474f;">{{ group.hour }}</div>
-                <table class="table-clean" style="margin-top:8px;">
-                    <tr>
-                        <th>Hora</th>
-                        <th>Medicamento</th>
-                        <th>Dosis</th>
-                        <th>Estado</th>
-                        <th>Nota</th>
-                        <th>Acción</th>
-                    </tr>
+            <div style="margin-top:16px;">
+                <div class="pill pill-gray" style="display:inline-flex; align-items:center; gap:6px;">{{ group.hour }}</div>
+                <table class="table-clean row-hover" style="margin-top:8px;">
+                    <thead>
+                        <tr>
+                            <th>Horario</th>
+                            <th>Medicamento</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
                     {% for ev in group.events %}
                     <tr>
-                        <td>{{ fmt_dt(ev.scheduled_time) }}</td>
-                        <td>{{ ev.medication_name }}</td>
-                        <td>{{ ev.display_dose or ev.medication_dose }}</td>
                         <td>
-                            {% if ev.status == 'Omitida' %}
-                                <span class="pill pill-amber">Omitida</span>
-                            {% elif ev.status == 'Vencida' %}
-                                <span class="pill pill-danger">Vencida</span>
-                            {% elif ev.status == 'Próxima' %}
-                                <span class="pill pill-info">Próxima</span>
-                            {% else %}
-                                <span class="pill pill-success">Tomada</span>
-                            {% endif %}
+                            <div class="time-col">
+                                <div class="time-main" data-sched="{{ ev.scheduled_time }}">{{ fmt_dt(ev.scheduled_time) }}</div>
+                                <div class="time-sub relative-time"></div>
+                            </div>
                         </td>
-                        <td>{{ ev.note or "—" }}</td>
                         <td>
-                            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <div style="font-weight:700;">{{ ev.medication_name }}</div>
+                                <div class="pill pill-gray">{{ ev.display_dose or ev.medication_dose }}</div>
+                            </div>
+                        </td>
+                        <td>
+                        {% if ev.status == 'Omitida' %}
+                            <span class="state state-omitida">Omitida</span>
+                        {% elif ev.status == 'Vencida' %}
+                            <span class="state state-vencida">Vencida</span>
+                        {% elif ev.status == 'Próxima' %}
+                            <span class="state state-proxima">Próxima</span>
+                        {% else %}
+                            <span class="state state-tomada">Tomada</span>
+                        {% endif %}
+                        </td>
+                        <td>
+                            <div class="action-bar">
                                 {% if ev.status in ['Tomada', 'Omitida'] %}
                                     <form method="post" action="{{ url_for('undo_dose', event_id=ev.id) }}">
-                                        <button type="submit" class="btn-ghost">Deshacer</button>
+                                        <button type="submit" class="btn-ghost btn-sm">Deshacer</button>
                                     </form>
                                 {% else %}
                                     <form method="post" action="{{ url_for('take_dose', event_id=ev.id) }}">
-                                        <button type="submit" class="btn-ghost">Marcar tomada</button>
+                                        <button type="submit" class="btn-primary btn-sm">Marcar tomada</button>
                                     </form>
                                     <form method="post" action="{{ url_for('skip_dose', event_id=ev.id) }}">
-                                        <button type="submit" class="btn-ghost">Omitir</button>
+                                        <button type="submit" class="btn-ghost btn-sm">Omitir</button>
                                     </form>
                                 {% endif %}
-                                <form method="post" action="{{ url_for('note_dose', event_id=ev.id) }}">
-                                    <input type="text" name="note" value="{{ ev.note }}" placeholder="Nota" style="max-width:140px;">
-                                    <button type="submit" class="btn-ghost">Guardar nota</button>
-                                </form>
+                                <button type="button" class="btn-ghost btn-sm note-btn" data-action="{{ url_for('note_dose', event_id=ev.id) }}" data-note="{{ ev.note|e or '' }}">
+                                    Nota {% if ev.note %}<span class="note-indicator"></span>{% endif %}
+                                </button>
                             </div>
                         </td>
                     </tr>
                     {% endfor %}
+                    </tbody>
                 </table>
             </div>
         {% endfor %}
     {% endif %}
 </div>
+
+<div id="note-backdrop" class="note-modal-backdrop">
+  <div class="note-modal fade-in">
+    <h3 style="margin-top:0;">Nota del evento</h3>
+    <form id="note-form" method="post" action="">
+        <textarea name="note" id="note-text" rows="3" placeholder="Escribe una nota breve"></textarea>
+        <div style="display:flex;gap:8px;justify-content:flex-end; margin-top:12px;">
+            <button type="button" class="btn-ghost btn-sm" id="note-cancel" style="margin-top:0;">Cancelar</button>
+            <button type="submit" class="btn-primary btn-sm" style="margin-top:0;">Guardar</button>
+        </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function() {
+    const backdrop = document.getElementById("note-backdrop");
+    const noteForm = document.getElementById("note-form");
+    const noteText = document.getElementById("note-text");
+    const noteButtons = document.querySelectorAll(".note-btn");
+    const cancelBtn = document.getElementById("note-cancel");
+    noteButtons.forEach(btn => {
+        btn.addEventListener("click", ()=>{
+            noteForm.action = btn.dataset.action;
+            noteText.value = btn.dataset.note || "";
+            backdrop.style.display = "flex";
+            noteText.focus();
+        });
+    });
+    cancelBtn.addEventListener("click", ()=> { backdrop.style.display="none"; });
+    backdrop.addEventListener("click", (e)=> { if (e.target === backdrop) backdrop.style.display="none"; });
+
+    document.querySelectorAll(".action-bar form").forEach(f => {
+        f.addEventListener("submit", ()=>{
+            const btn = f.querySelector("button");
+            if (btn) { btn.disabled = true; btn.textContent = "…"; }
+        });
+    });
+
+    const rows = document.querySelectorAll(".time-main");
+    const formatRelative = (iso) => {
+        if (!iso) return "";
+        const dt = new Date(iso);
+        if (isNaN(dt.getTime())) return "";
+        const now = new Date();
+        const options = { hour: "2-digit", minute: "2-digit" };
+        const timeStr = dt.toLocaleTimeString([], options);
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const target = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+        const diffDays = Math.round((target - today)/(1000*60*60*24));
+        if (diffDays === 0) return "Hoy · " + timeStr;
+        if (diffDays === 1) return "Mañana · " + timeStr;
+        if (diffDays === -1) return "Ayer · " + timeStr;
+        return dt.toLocaleDateString() + " · " + timeStr;
+    };
+    rows.forEach(el => {
+        const iso = el.dataset.sched;
+        const rel = formatRelative(iso);
+        const sub = el.parentElement.querySelector(".time-sub");
+        if (sub && rel) sub.textContent = rel;
+    });
+})();
+</script>
 {% endblock %}

@@ -13,6 +13,11 @@ def now() -> datetime:
     return datetime.now() + timedelta(minutes=OFFSET_MINUTES)
 
 
+def to_db_timestamp(dt: datetime) -> str:
+    """Normalize timestamps to a SQLite-friendly string (UTC/local naive, no microseconds)."""
+    return dt.replace(microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
+
+
 def _parse_dose_text(dose: str):
     if not dose:
         return None, None
@@ -367,8 +372,8 @@ def add_medication(
                 dose,
                 frequency_hours,
                 notes,
-                end_time.isoformat() if end_time else None,
-                start_time.isoformat(),
+                to_db_timestamp(end_time) if end_time else None,
+                to_db_timestamp(start_time),
                 active,
                 rxnorm_rxcui,
                 rxnorm_name,
@@ -416,8 +421,8 @@ def update_medication(
             ("dose", dose),
             ("frequency_hours", frequency_hours),
             ("notes", notes),
-            ("start_time", start_time.isoformat() if start_time else None),
-            ("end_time", end_time.isoformat() if end_time else None),
+            ("start_time", to_db_timestamp(start_time) if start_time else None),
+            ("end_time", to_db_timestamp(end_time) if end_time else None),
         ]
         if active is not None:
             fields.append(("active", active))
@@ -449,7 +454,7 @@ def calculate_age(dob_iso: str | None):
 def _insert_dose_event(cur, medication_id: int, when: datetime):
     cur.execute(
         "INSERT INTO dose_event (medication_id, scheduled_time, taken) VALUES (?, ?, ?)",
-        (medication_id, when.isoformat(), 0),
+        (medication_id, to_db_timestamp(when), 0),
     )
 
 
@@ -497,7 +502,7 @@ def ensure_next_dose_event(medication_id: int):
             WHERE medication_id = ? AND datetime(scheduled_time) >= datetime(?)
               AND (taken = 0 AND skipped = 0)
             """,
-            (medication_id, now().isoformat()),
+            (medication_id, to_db_timestamp(now())),
         )
         pending_exists = cur.fetchone()["count"] > 0
         if not pending_exists:
@@ -505,7 +510,7 @@ def ensure_next_dose_event(medication_id: int):
 
 
 def list_upcoming_dose_events(limit: int = 50, patient_name: str | None = None):
-    now_ts = now().isoformat()
+    now_ts = to_db_timestamp(now())
     filter_name = (patient_name or "").strip()
     clauses = []
     params = []
@@ -516,7 +521,7 @@ def list_upcoming_dose_events(limit: int = 50, patient_name: str | None = None):
         query = """
             SELECT de.*, m.name AS medication_name, m.dose AS medication_dose, m.frequency_hours,
                    m.dose_value AS medication_dose_value, m.dose_unit AS medication_dose_unit,
-                   p.name AS patient_name
+                   p.name AS patient_name, p.id AS patient_id
             FROM dose_event de
             JOIN medication m ON de.medication_id = m.id
             JOIN patient p ON m.patient_id = p.id
@@ -670,7 +675,7 @@ def reset_future_events(medication_id: int, seed_time: datetime | None = None):
               AND taken = 0
               AND datetime(scheduled_time) >= datetime(?)
             """,
-            (medication_id, now_dt.isoformat()),
+            (medication_id, to_db_timestamp(now_dt)),
         )
         end_raw = med.get("end_time")
         end_dt = datetime.fromisoformat(end_raw) if end_raw else None
@@ -695,7 +700,7 @@ def add_fall_event(patient_id: int, occurred_at_dt: datetime, location: str, not
     with db_cursor() as cur:
         cur.execute(
             "INSERT INTO fall_event (patient_id, occurred_at, location, note) VALUES (?, ?, ?, ?)",
-            (patient_id, occurred_at_dt.isoformat(), location, note),
+            (patient_id, to_db_timestamp(occurred_at_dt), location, note),
         )
 
 
@@ -807,19 +812,19 @@ def seed_demo():
             with db_cursor() as cur:
                 cur.execute(
                     "INSERT INTO dose_event (medication_id, scheduled_time, taken, skipped) VALUES (?, ?, ?, ?)",
-                    (mid, (base_now - timedelta(hours=h)).isoformat(), 1, 0),
+                    (mid, to_db_timestamp(base_now - timedelta(hours=h)), 1, 0),
                 )
         for h in overdue_hours:
             with db_cursor() as cur:
                 cur.execute(
                     "INSERT INTO dose_event (medication_id, scheduled_time, taken, skipped) VALUES (?, ?, ?, ?)",
-                    (mid, (base_now - timedelta(hours=h)).isoformat(), 0, 0),
+                    (mid, to_db_timestamp(base_now - timedelta(hours=h)), 0, 0),
                 )
         for h in future_hours:
             with db_cursor() as cur:
                 cur.execute(
                     "INSERT INTO dose_event (medication_id, scheduled_time, taken, skipped) VALUES (?, ?, ?, ?)",
-                    (mid, (base_now + timedelta(hours=h)).isoformat(), 0, 0),
+                    (mid, to_db_timestamp(base_now + timedelta(hours=h)), 0, 0),
                 )
 
     for p in patients:
@@ -838,7 +843,7 @@ def seed_demo():
             with db_cursor() as cur:
                 cur.execute(
                     "INSERT INTO fall_event (patient_id, occurred_at, location, note) VALUES (?, ?, ?, ?)",
-                    (pid, (base_now - timedelta(days=days)).isoformat(), "Pasillo", "Demo"),
+                    (pid, to_db_timestamp(base_now - timedelta(days=days)), "Pasillo", "Demo"),
                 )
         for m in p["meds"]:
             start_time = base_now - timedelta(hours=24)

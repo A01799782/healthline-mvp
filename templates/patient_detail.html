@@ -1,24 +1,27 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-  .adherence-grid { display: inline-grid; grid-template-columns: auto auto; row-gap: 4px; column-gap: 12px; }
-  .adherence-grid div:nth-child(2n) { text-align: right; font-weight: 600; justify-self: end; }
-  .adherence-pct-row { display:flex; gap:8px; margin-top:8px; }
-  .pill-status { padding:4px 10px; border-radius:12px; font-size:12px; border:1px solid var(--border); }
-  .pill-blue { background:#e3f2fd; color:#0d47a1; border-color:#cfe2ff; }
-  .pill-green { background:#e8f5e9; color:#2e7d32; border-color:#c8e6c9; }
-  .pill-amber { background:#fff3cd; color:#8a6d3b; border-color:#ffe8a3; }
-  .pill-red { background:#ffe4e0; color:#b42318; border-color:#ffc7be; }
-  .table-clean { width:100%; border-collapse:collapse; }
-  .table-clean th, .table-clean td { padding:10px; border-bottom:1px solid var(--border); text-align:left; font-size:14px; }
-  .table-clean th { color:var(--text-muted); font-weight:700; background:#f9fafb; }
-  .table-clean tr:hover td { background:#f7f8fb; }
+  .table-clean th, .table-clean td { padding:12px 10px; }
   .header-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   .header-title { margin:0; font-size:24px; font-weight:700; color:var(--text); }
-  .avatar-lg { width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg,#eceff3,#dfe3eb); overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
-  .card-section { margin-top:12px; }
+  .avatar-lg { width:76px; height:76px; border-radius:50%; background:linear-gradient(135deg,#eceff3,#dfe3eb); overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  .card-section { margin-top:var(--space-2); }
   .wizard-modal { background:rgba(0,0,0,0.35); }
   .wizard-box { background:#fff; padding:18px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.12); }
+  .adherence-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:12px; }
+  .metric-card { border:1px solid var(--border); border-radius:14px; padding:12px 14px; background:#f9fafb; display:flex; flex-direction:column; gap:8px; }
+  .metric-head { display:flex; align-items:center; justify-content:space-between; }
+  .metric-title { font-weight:700; }
+  .metric-rows { display:grid; grid-template-columns: auto auto; row-gap:6px; column-gap:12px; }
+  .metric-rows div:nth-child(2n) { text-align:right; font-weight:600; }
+  .muted-label { font-size:12px; color:var(--text-muted); }
+  .med-header { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .med-row { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+  .pill-line { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .state-lite { padding:4px 10px; border-radius:10px; font-size:12px; border:1px solid var(--border); }
+  .state-active { background:#e6f4ed; color:#166534; }
+  .state-paused { background:#fff7e6; color:#8a6d3b; }
+  .state-ended { background:#fff1f0; color:#b42318; }
 </style>
 
 <a href="{{ url_for('patient_list') }}" class="link-plain">&larr; Volver</a>
@@ -61,46 +64,54 @@
 <div class="card card-section">
     <h3 style="margin-top:0;">Eventualidades</h3>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div>Caídas últimos 90 días: <strong>{{ fall_count }}</strong></div>
-        <a href="{{ url_for('fall_new', patient_id=patient.id) }}"><button type="button">Reportar caída</button></a>
-        <a href="{{ url_for('falls_list', patient_id=patient.id) }}">Ver historial de caídas</a>
+        <div class="muted">Caídas últimos 90 días</div>
+        {% if fall_count %}
+        <div style="font-weight:700;">{{ fall_count }}</div>
+        {% endif %}
+        <a href="{{ url_for('fall_new', patient_id=patient.id) }}"><button type="button" class="btn-primary btn-sm" style="margin-top:0;">Reportar caída</button></a>
+        <a href="{{ url_for('falls_list', patient_id=patient.id) }}" class="link-plain">Ver historial de caídas</a>
     </div>
-</div>
 <!-- DO NOT EDIT: Adherencia copy/rows are final. No agregar "(vencidas)" ni filas "Futuras" en 7d/30d. -->
+</div>
 <div class="card">
-    <h3 style="margin-top:0;">Adherencia</h3>
-    <div style="display:flex;gap:16px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:220px;">
-            <div style="font-weight:bold;margin-bottom:8px;">Hoy</div>
-            <div class="adherence-grid">
-                <div>Tomadas</div><div>{{ adherence_today.taken_due }}</div>
-                <div>Omitidas</div><div>{{ adherence_today.skipped_due }}</div>
-                <div>Vencidas</div><div>{{ adherence_today.overdue_due }}</div>
-                <div>Futuras</div><div>{{ adherence_today.pending_future }}</div>
+    <div class="section-head">
+        <h3 class="section-title">Adherencia</h3>
+    </div>
+    <div class="adherence-grid">
+        <div class="metric-card">
+            <div class="metric-head">
+                <div class="metric-title">Hoy</div>
+                <div class="muted-label">Acción inmediata</div>
+            </div>
+            <div class="metric-rows" style="row-gap:10px;">
+                <div>Tomadas</div><div style="font-size:22px; font-weight:700;">{{ adherence_today.taken_due }}</div>
+                <div>Omitidas</div><div style="font-size:22px; font-weight:700;">{{ adherence_today.skipped_due }}</div>
+                <div>Vencidas</div><div style="font-size:22px; font-weight:700; color:#b42318;">{{ adherence_today.overdue_due }}</div>
+                <div>Futuras</div><div style="font-size:22px; font-weight:700;">{{ adherence_today.pending_future }}</div>
             </div>
         </div>
-        <div style="flex:1;min-width:220px;">
-            <div style="font-weight:bold;margin-bottom:8px;">Últimos 7 días</div>
-            <div class="adherence-grid">
-                <div>Tomadas</div><div>{{ adherence_7d.taken_due }}</div>
-                <div>Omitidas</div><div>{{ adherence_7d.skipped_due }}</div>
-                <div>Vencidas</div><div>{{ adherence_7d.overdue_due }}</div>
+        <div class="metric-card">
+            <div class="metric-head">
+                <div class="metric-title">Últimos 7 días</div>
+                <div class="muted-label">{% if adherence_pct_7d is not none %}{{ adherence_pct_7d }}%{% else %}—{% endif %}</div>
             </div>
-            <div class="adherence-pct-row">
-              <span>% Adherencia</span>
-              <strong>{% if adherence_pct_7d is not none %}{{ adherence_pct_7d }}%{% else %}—{% endif %}</strong>
+            <div class="progress" style="margin-top:4px;"><div class="progress-fill" style="width:{% if adherence_pct_7d is not none %}{{ adherence_pct_7d }}%{% else %}0%{% endif %};"></div></div>
+            <div class="metric-rows" style="row-gap:10px;">
+                <div>Tomadas</div><div style="font-size:18px; font-weight:700;">{{ adherence_7d.taken_due }}</div>
+                <div>Omitidas</div><div style="font-size:18px; font-weight:700;">{{ adherence_7d.skipped_due }}</div>
+                <div>Vencidas</div><div style="font-size:18px; font-weight:700; color:#b42318;">{{ adherence_7d.overdue_due }}</div>
             </div>
         </div>
-        <div style="flex:1;min-width:220px;">
-            <div style="font-weight:bold;margin-bottom:8px;">Últimos 30 días</div>
-            <div class="adherence-grid">
-                <div>Tomadas</div><div>{{ adherence_30d.taken_due }}</div>
-                <div>Omitidas</div><div>{{ adherence_30d.skipped_due }}</div>
-                <div>Vencidas</div><div>{{ adherence_30d.overdue_due }}</div>
+        <div class="metric-card">
+            <div class="metric-head">
+                <div class="metric-title">Últimos 30 días</div>
+                <div class="muted-label">{% if adherence_pct_30d is not none %}{{ adherence_pct_30d }}%{% else %}—{% endif %}</div>
             </div>
-            <div class="adherence-pct-row">
-              <span>% Adherencia</span>
-              <strong>{% if adherence_pct_30d is not none %}{{ adherence_pct_30d }}%{% else %}—{% endif %}</strong>
+            <div class="progress" style="margin-top:4px;"><div class="progress-fill" style="width:{% if adherence_pct_30d is not none %}{{ adherence_pct_30d }}%{% else %}0%{% endif %};"></div></div>
+            <div class="metric-rows" style="row-gap:10px;">
+                <div>Tomadas</div><div style="font-size:18px; font-weight:700;">{{ adherence_30d.taken_due }}</div>
+                <div>Omitidas</div><div style="font-size:18px; font-weight:700;">{{ adherence_30d.skipped_due }}</div>
+                <div>Vencidas</div><div style="font-size:18px; font-weight:700; color:#b42318;">{{ adherence_30d.overdue_due }}</div>
             </div>
         </div>
     </div>
@@ -108,19 +119,19 @@
 
 <div class="row" style="margin-top:12px;">
     <div class="col">
-        <div style="display:flex;align-items:center;gap:12px;">
-            <h3 style="margin:0;">Medicamentos</h3>
-            <button id="open-med-wizard" type="button">+ Agregar medicamento</button>
+        <div class="section-head" style="margin-bottom:8px;">
+            <h3 class="section-title">Medicamentos</h3>
+            <button id="open-med-wizard" type="button" class="btn-primary btn-sm" style="margin-top:0;">+ Agregar medicamento</button>
         </div>
         {% for med, events in meds_with_events %}
         <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-                <div>
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <strong>{{ med.name }}</strong>
-                        <span class="pill">{{ (med.dose_value and med.dose_unit) and (med.dose_value ~ ' ' ~ med.dose_unit) or med.dose }}</span>
+            <div class="med-row">
+                <div style="flex:1; min-width:220px;">
+                    <div style="font-weight:700; font-size:16px;">{{ med.name }}</div>
+                    <div class="muted" style="margin-top:4px;">
+                        {{ (med.dose_value and med.dose_unit) and (med.dose_value ~ ' ' ~ med.dose_unit) or med.dose }}
                     </div>
-                    <div class="muted">
+                    <div class="muted" style="margin-top:4px; line-height:1.4;">
                         Cada {{ med.frequency_hours }} horas{% if med.notes %} · {{ med.notes }}{% endif %}
                         {% if med.start_time %} · Inicio: {{ fmt_dt(med.start_time) }}{% endif %}
                         {% if med.end_time %} · Fin: {{ fmt_dt(med.end_time) }}{% endif %}
@@ -129,25 +140,25 @@
                 <div style="display:flex;gap:8px;align-items:center;">
                     <form method="post" action="{{ url_for('medication_toggle_active', med_id=med.id) }}">
                         {% if med.active %}
-                        <button type="submit" class="btn-ghost">Pausar</button>
+                        <button type="submit" class="btn-ghost btn-sm">Pausar</button>
                         {% else %}
-                        <button type="submit" class="btn-ghost">Reanudar</button>
+                        <button type="submit" class="btn-ghost btn-sm">Reanudar</button>
                         {% endif %}
                     </form>
                     <a href="{{ url_for('medication_edit', med_id=med.id) }}">
-                        <button type="button" class="btn-ghost">Editar</button>
+                        <button type="button" class="btn-ghost btn-sm">Editar</button>
                     </a>
                     {% if med.ended %}
-                        <span class="pill pill-danger">Terminado</span>
+                        <span class="state state-vencida" style="padding:4px 10px;">Terminado</span>
                     {% elif not med.active %}
-                        <span class="pill pill-warn">Pausado</span>
+                        <span class="state state-omitida" style="padding:4px 10px;">Pausado</span>
                     {% else %}
-                        <span class="pill pill-success">Activo</span>
+                        <span class="state state-tomada" style="padding:4px 10px;">Activo</span>
                     {% endif %}
                 </div>
             </div>
-            <div style="margin-top:8px;">
-                <strong>Próximas tomas</strong>
+            <div style="margin-top:10px;">
+                <div class="muted" style="font-weight:700; margin-bottom:6px;">Próximas tomas</div>
                 <table class="table-clean">
                     <tr><th>Horario</th><th>Estado</th><th>Acción</th></tr>
                     {% for ev in events %}
@@ -155,18 +166,18 @@
                         <td>{{ fmt_dt(ev.scheduled_time) }}</td>
                         <td>
                             {% if ev.taken %}
-                                <span class="pill pill-success">Tomada</span>
+                                <span class="state state-tomada">Tomada</span>
                             {% else %}
-                                <span class="pill pill-warn">Pendiente</span>
+                                <span class="state state-proxima">Pendiente</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if not ev.taken %}
                             <form method="post" action="{{ url_for('take_dose', event_id=ev.id) }}">
-                                <button type="submit" class="btn-ghost">Marcar</button>
+                                <button type="submit" class="btn-ghost btn-sm">Marcar</button>
                             </form>
                             {% else %}
-                            —
+                            <span class="muted">—</span>
                             {% endif %}
                         </td>
                     </tr>

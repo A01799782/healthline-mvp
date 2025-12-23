@@ -1,11 +1,38 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 style="margin-top:0;">Próximas tomas</h2>
-<div class="card" style="margin-bottom:12px;">
-    <form method="get" action="{{ url_for('alerts') }}" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+<style>
+  .alerts-header { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .alerts-title { margin:0; font-size:22px; font-weight:700; }
+  .filters { display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; }
+  .table-wrapper { overflow:auto; }
+  .patient-cell { display:flex; align-items:center; gap:10px; min-width:160px; }
+  .time-col { display:flex; flex-direction:column; gap:2px; }
+  .time-main { font-weight:700; }
+  .time-sub { color:var(--text-muted); font-size:12px; }
+  .action-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .note-indicator { width:6px; height:6px; border-radius:50%; background:#4338ca; display:inline-block; }
+  .note-modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.35); display:none; align-items:center; justify-content:center; z-index:3500; }
+  .note-modal { background:#fff; padding:16px; border-radius:12px; box-shadow:0 12px 32px rgba(0,0,0,0.16); width:95%; max-width:420px; }
+  .alert-table tr td, .alert-table tr th { vertical-align:middle; }
+  .row-hover tbody tr { transition: background 0.15s ease, box-shadow 0.15s ease; }
+  .row-hover tbody tr:hover td { background:#f8fafc; }
+</style>
+
+<div class="alerts-header">
+  <h2 class="alerts-title">Próximas tomas</h2>
+  <div class="legend" style="font-size:12px; color:var(--text-muted); gap:10px; display:flex; flex-wrap:wrap;">
+    <span class="state state-vencida">Vencida</span>
+    <span class="state state-proxima">Próxima</span>
+    <span class="state state-omitida">Omitida</span>
+    <span class="state state-tomada">Tomada</span>
+  </div>
+</div>
+
+<div class="card">
+    <form method="get" action="{{ url_for('alerts') }}" class="filters">
         <div style="flex:1;min-width:240px;">
             <label for="patient_name">Paciente</label>
-            <input type="text" name="patient_name" id="patient_name" list="patient-list" value="{{ patient_name }}">
+            <input type="text" name="patient_name" id="patient_name" list="patient-list" value="{{ patient_name }}" placeholder="Filtrar por nombre">
             <datalist id="patient-list">
                 {% for name in patient_names %}
                 <option value="{{ name }}"></option>
@@ -13,64 +40,146 @@
             </datalist>
         </div>
         <div style="display:flex;gap:8px;">
-            <button type="submit">Filtrar</button>
-            <a href="{{ url_for('alerts') }}"><button type="button" class="btn-ghost">Limpiar</button></a>
+            <button type="submit" class="btn-primary btn-sm" style="margin-top:0;">Filtrar</button>
+            <a href="{{ url_for('alerts') }}" class="link-plain"><button type="button" class="btn-ghost btn-sm" style="margin-top:0;">Limpiar</button></a>
         </div>
     </form>
 </div>
-<div class="card">
-    <table class="table-clean">
-        <tr>
-            <th>Paciente</th>
-            <th>Medicamento</th>
-            <th>Dosis</th>
-            <th>Horario</th>
-            <th>Estado</th>
-            <th>Nota</th>
-            <th>Acción</th>
-        </tr>
-        {% for ev in events %}
-        <tr>
-            <td>{{ ev.patient_name }}</td>
-            <td>{{ ev.medication_name }}</td>
-            <td>{{ ev.display_dose or ev.medication_dose }}</td>
-            <td>{{ fmt_dt(ev.scheduled_time) }}</td>
-            <td>
-                {% if ev.status == 'Omitida' %}
-                    <span class="pill pill-amber">Omitida</span>
-                {% elif ev.status == 'Vencida' %}
-                    <span class="pill pill-danger">Vencida</span>
-                {% elif ev.status == 'Próxima' %}
-                    <span class="pill pill-info">Próxima</span>
+
+<div class="card table-card">
+    <div class="table-wrapper">
+        <table class="table-clean alert-table row-hover">
+            <thead>
+                <tr>
+                    <th>Paciente</th>
+                    <th>Medicamento</th>
+                    <th>Horario</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ev in events %}
+                <tr>
+                    <td>
+                        <div class="patient-cell">
+                            <div class="avatar" aria-hidden="true">{{ ev.patient_name[:1] }}</div>
+                            <div>
+                                <a href="{{ url_for('patient_detail', patient_id=ev.patient_id) }}" class="link-plain" style="font-weight:700; color:var(--text);">{{ ev.patient_name }}</a>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <div style="font-weight:700;">{{ ev.medication_name }}</div>
+                            <div class="pill pill-gray">{{ ev.display_dose or ev.medication_dose }}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="time-col">
+                            <div class="time-main" data-sched="{{ ev.scheduled_time }}">{{ fmt_dt(ev.scheduled_time) }}</div>
+                            <div class="time-sub relative-time"></div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if ev.status == 'Omitida' %}
+                            <span class="state state-omitida">Omitida</span>
+                        {% elif ev.status == 'Vencida' %}
+                            <span class="state state-vencida">Vencida</span>
+                        {% elif ev.status == 'Próxima' %}
+                            <span class="state state-proxima">Próxima</span>
+                        {% else %}
+                            <span class="state state-tomada">Tomada</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-bar">
+                            {% if ev.status in ['Tomada', 'Omitida'] %}
+                                <form method="post" action="{{ url_for('undo_dose', event_id=ev.id) }}">
+                                    <button type="submit" class="btn-ghost btn-sm">Deshacer</button>
+                                </form>
+                            {% else %}
+                                <form method="post" action="{{ url_for('take_dose', event_id=ev.id) }}">
+                                    <button type="submit" class="btn-primary btn-sm">Marcar tomada</button>
+                                </form>
+                                <form method="post" action="{{ url_for('skip_dose', event_id=ev.id) }}">
+                                    <button type="submit" class="btn-ghost btn-sm">Omitir</button>
+                                </form>
+                            {% endif %}
+                            <button type="button" class="btn-ghost btn-sm note-btn" data-action="{{ url_for('note_dose', event_id=ev.id) }}" data-note="{{ ev.note|e or '' }}">
+                                Nota {% if ev.note %}<span class="note-indicator"></span>{% endif %}
+                            </button>
+                        </div>
+                    </td>
+                </tr>
                 {% else %}
-                    <span class="pill pill-success">Tomada</span>
-                {% endif %}
-            </td>
-            <td>{{ ev.note or "—" }}</td>
-            <td>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                    {% if ev.status in ['Tomada', 'Omitida'] %}
-                        <form method="post" action="{{ url_for('undo_dose', event_id=ev.id) }}">
-                            <button type="submit" class="btn-ghost">Deshacer</button>
-                        </form>
-                    {% else %}
-                        <form method="post" action="{{ url_for('take_dose', event_id=ev.id) }}">
-                            <button type="submit" class="btn-ghost">Marcar tomada</button>
-                        </form>
-                        <form method="post" action="{{ url_for('skip_dose', event_id=ev.id) }}">
-                            <button type="submit" class="btn-ghost">Omitir</button>
-                        </form>
-                    {% endif %}
-                    <form method="post" action="{{ url_for('note_dose', event_id=ev.id) }}">
-                        <input type="text" name="note" value="{{ ev.note }}" placeholder="Nota" style="max-width:140px;">
-                        <button type="submit" class="btn-ghost">Guardar nota</button>
-                    </form>
-                </div>
-            </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="7" class="muted">No hay tomas próximas.</td></tr>
-        {% endfor %}
-    </table>
+                <tr><td colspan="5" class="muted">No hay tomas próximas.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
+
+<div id="note-backdrop" class="note-modal-backdrop">
+  <div class="note-modal fade-in">
+    <h3 style="margin-top:0;">Nota del evento</h3>
+    <form id="note-form" method="post" action="">
+        <textarea name="note" id="note-text" rows="3" placeholder="Escribe una nota breve"></textarea>
+        <div style="display:flex;gap:8px;justify-content:flex-end; margin-top:12px;">
+            <button type="button" class="btn-ghost btn-sm" id="note-cancel" style="margin-top:0;">Cancelar</button>
+            <button type="submit" class="btn-primary btn-sm" style="margin-top:0;">Guardar</button>
+        </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function() {
+    const backdrop = document.getElementById("note-backdrop");
+    const noteForm = document.getElementById("note-form");
+    const noteText = document.getElementById("note-text");
+    const noteButtons = document.querySelectorAll(".note-btn");
+    const cancelBtn = document.getElementById("note-cancel");
+    noteButtons.forEach(btn => {
+        btn.addEventListener("click", ()=>{
+            noteForm.action = btn.dataset.action;
+            noteText.value = btn.dataset.note || "";
+            backdrop.style.display = "flex";
+            noteText.focus();
+        });
+    });
+    cancelBtn.addEventListener("click", ()=> { backdrop.style.display="none"; });
+    backdrop.addEventListener("click", (e)=> { if (e.target === backdrop) backdrop.style.display="none"; });
+
+    document.querySelectorAll(".action-bar form").forEach(f => {
+        f.addEventListener("submit", ()=>{
+            const btn = f.querySelector("button");
+            if (btn) { btn.disabled = true; btn.textContent = "…"; }
+        });
+    });
+
+    const rows = document.querySelectorAll(".time-main");
+    const formatRelative = (iso) => {
+        if (!iso) return "";
+        const dt = new Date(iso);
+        if (isNaN(dt.getTime())) return "";
+        const now = new Date();
+        const options = { hour: "2-digit", minute: "2-digit" };
+        const timeStr = dt.toLocaleTimeString([], options);
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const target = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+        const diffDays = Math.round((target - today)/(1000*60*60*24));
+        if (diffDays === 0) return "Hoy · " + timeStr;
+        if (diffDays === 1) return "Mañana · " + timeStr;
+        if (diffDays === -1) return "Ayer · " + timeStr;
+        return dt.toLocaleDateString() + " · " + timeStr;
+    };
+    rows.forEach(el => {
+        const iso = el.dataset.sched;
+        const rel = formatRelative(iso);
+        const sub = el.parentElement.querySelector(".time-sub");
+        if (sub && rel) sub.textContent = rel;
+    });
+})();
+</script>
 {% endblock %}

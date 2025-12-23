@@ -1,31 +1,30 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-  body { background:#f6f7fb; font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  header { background:#fcfcfd !important; color:#2c2c2c !important; border-bottom:1px solid #e5e7eb; }
+  body { background:var(--bg-app); font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  header { background:#fbfbfd !important; color:#2c2c2c !important; border-bottom:1px solid var(--border); }
   header nav a { color:#2c2c2c !important; padding-bottom:4px; border-bottom:2px solid transparent; }
-  header nav a:hover { border-bottom-color:#c5c7d0; }
-  .page-shell { max-width:960px; margin:0 auto; padding:16px; }
+  header nav a:hover { border-bottom-color:#d6dae4; }
+  .page-shell { max-width:1040px; margin:0 auto; padding:16px; }
   .top-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
   .title { margin:0; font-size:24px; font-weight:700; color:#1f2933; }
   .legend { display:flex; gap:8px; font-size:12px; color:#6b7280; flex-wrap:wrap; align-items:center; }
-  .legend-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:12px; border:1px solid #e5e7eb; background:#fff; }
-  .btn-primary { background:#2f6ff9; color:#fff; border:none; padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600; transition:all 0.15s ease; }
-  .btn-primary:hover { background:#1f5ed8; }
+  .legend-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:12px; border:1px solid var(--border); background:#fff; }
+  .btn-primary { background:var(--accent); color:#fff; border:none; padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600; transition:all 0.15s ease; }
+  .btn-primary:hover { background:var(--accent-hover); }
   .patient-card-link { text-decoration:none; color:inherit; }
-  .patient-card { cursor:pointer; padding:16px; min-height:120px; border-radius:16px; border:1px solid #e5e7eb; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.06); transition:all 0.16s ease; }
-  .patient-card:hover { box-shadow:0 4px 12px rgba(0,0,0,0.08); border-color:#d0d4dc; transform:translateY(-1px); }
+  .patient-card { cursor:pointer; padding:18px; min-height:126px; border-radius:16px; border:1px solid var(--border); background:#fff; box-shadow:var(--shadow); transition:all 0.16s ease; }
+  .patient-card:hover { box-shadow:var(--shadow-hover); border-color:#cfd4df; transform:translateY(-2px); }
   .patient-card-body { display:flex; gap:16px; align-items:center; }
-  .patient-avatar { width:80px; height:80px; border-radius:50%; background:linear-gradient(135deg,#eceff3,#dfe3eb); overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  .patient-avatar { width:82px; height:82px; border-radius:50%; background:linear-gradient(135deg,#eceff3,#dfe3eb); overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
   .patient-avatar img { width:100%; height:100%; object-fit:cover; }
   .patient-info { flex:1; display:flex; flex-direction:column; gap:6px; }
   .patient-name { font-size:19px; font-weight:700; color:#1f2933; display:flex; align-items:center; gap:8px; }
   .patient-notes { font-size:13px; color:#6b7280; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .fall-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:12px; font-size:12px; font-weight:600; border:1px solid #e5e7eb; }
-  .fall-0 { background:#f5f6f9; color:#4b5563; }
-  .fall-1 { background:#fff3cd; color:#8a6d3b; }
-  .fall-2 { background:#ffe4e0; color:#b42318; }
-  .fall-3 { background:#e5e7eb; color:#111827; }
+  .fall-badge { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:10px; font-size:12px; font-weight:700; border:none; }
+  .fall-1 { background:#f8e6b5; color:#7a5307; }
+  .fall-2 { background:#f9d2cd; color:#9f1f1b; }
+  .fall-3 { background:#111827; color:#f5f6f9; }
   .list-grid { display:flex; flex-direction:column; gap:12px; margin-top:12px; }
   @media (max-width:640px) {
     .patient-card-body { align-items:flex-start; }
@@ -68,8 +67,6 @@
                                     <span class="fall-badge fall-2" title="2 caídas en los últimos 90 días">2 caídas</span>
                                 {% elif falls >= 3 %}
                                     <span class="fall-badge fall-3" title="3 o más caídas en los últimos 90 días">3+ caídas</span>
-                                {% else %}
-                                    <span class="fall-badge fall-0" title="Sin caídas recientes">0</span>
                                 {% endif %}
                             </div>
                             {% if p.notes %}<div class="patient-notes">{{ p.notes }}</div>{% endif %}
@@ -151,17 +148,5 @@
 </script>
 <style>
 .patient-card-link { text-decoration: none; color: inherit; }
-.patient-card { cursor: pointer; padding: 14px; min-height: 100px; transition: box-shadow 0.15s ease, transform 0.1s ease; }
-.patient-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
-.patient-card-body { display: flex; gap: 14px; align-items: center; padding-top: 4px; padding-bottom: 4px; }
-.patient-avatar { width: 72px; height: 72px; border-radius: 50%; background: #e0e0e0; overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-.patient-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.patient-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-.patient-name { font-size: 18px; font-weight: 700; }
-.patient-notes { font-size: 13px; }
-.status-dot { display:inline-block; width:14px; height:14px; border-radius:50%; box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.15); }
-.dot-yellow { background:#fdd835; }
-.dot-red { background:#d32f2f; }
-.dot-gray { background:#424242; }
 </style>
 {% endblock %}

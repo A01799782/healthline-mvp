@@ -131,9 +131,9 @@ def patient_detail(patient_id: int):
     day_end = day_start + timedelta(days=1)
     seven_start = now_dt - timedelta(days=7)
     thirty_start = now_dt - timedelta(days=30)
-    adherence_today = db.get_adherence_summary(patient_id, day_start.isoformat(), day_end.isoformat(), now_dt.isoformat())
-    adherence_7d = db.get_adherence_summary(patient_id, seven_start.isoformat(), now_dt.isoformat(), now_dt.isoformat())
-    adherence_30d = db.get_adherence_summary(patient_id, thirty_start.isoformat(), now_dt.isoformat(), now_dt.isoformat())
+    adherence_today = db.get_adherence_summary(patient_id, db.to_db_timestamp(day_start), db.to_db_timestamp(day_end), db.to_db_timestamp(now_dt))
+    adherence_7d = db.get_adherence_summary(patient_id, db.to_db_timestamp(seven_start), db.to_db_timestamp(now_dt), db.to_db_timestamp(now_dt))
+    adherence_30d = db.get_adherence_summary(patient_id, db.to_db_timestamp(thirty_start), db.to_db_timestamp(now_dt), db.to_db_timestamp(now_dt))
     denom_7d = adherence_7d["taken_due"] + adherence_7d["skipped_due"] + adherence_7d["overdue_due"]
     denom_30d = adherence_30d["taken_due"] + adherence_30d["skipped_due"] + adherence_30d["overdue_due"]
     adherence_pct_7d = round(adherence_7d["taken_due"] * 100 / denom_7d, 1) if denom_7d > 0 else None
@@ -269,7 +269,7 @@ def patient_today(patient_id: int):
     current = db.now()
     day_start = current.replace(hour=0, minute=0, second=0, microsecond=0)
     day_end = day_start + timedelta(days=1)
-    events = db.list_patient_events_for_day(patient_id, day_start.isoformat(), day_end.isoformat())
+    events = db.list_patient_events_for_day(patient_id, db.to_db_timestamp(day_start), db.to_db_timestamp(day_end))
     enriched = []
     for ev in events:
         status_data = compute_event_status(ev, current)
@@ -335,8 +335,8 @@ def note_dose(event_id: int):
 @app.route("/adherence")
 def adherence_dashboard():
     patients = db.list_patients()
-    now_iso = db.now().isoformat()
-    seven_start = (datetime.fromisoformat(now_iso) - timedelta(days=7)).isoformat()
+    now_iso = db.to_db_timestamp(db.now())
+    seven_start = (datetime.fromisoformat(now_iso) - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
     rows = []
     for p in patients:
         adherence_7d = db.get_adherence_summary(p["id"], seven_start, now_iso, now_iso)

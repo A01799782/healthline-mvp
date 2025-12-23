@@ -1,28 +1,56 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 style="margin-top:0;">Dashboard de adherencia (7 días)</h2>
-<div class="card">
-    <table class="table-clean">
-        <tr>
-            <th>Paciente</th>
-            <th>Vencidas</th>
-            <th>% Adherencia</th>
-            <th>Tomadas</th>
-            <th>Omitidas</th>
-            <th>Caídas 90d</th>
-        </tr>
+<style>
+  .adh-header { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .adh-title { margin:0; font-size:22px; font-weight:700; }
+  .row-hover tbody tr { transition: background 0.15s ease, box-shadow 0.15s ease; }
+  .row-hover tbody tr:hover td { background:#f8fafc; }
+  .pill-mini { padding:4px 10px; border-radius:10px; font-size:12px; border:none; display:inline-flex; align-items:center; gap:6px; }
+  .pill-warn { background:#f8e6b5; color:#7a5307; }
+  .pill-info { background:#e7edff; color:#1e3a8a; }
+  .pill-gray { background:#edf0f5; color:#374151; }
+</style>
+
+<div class="adh-header">
+  <h2 class="adh-title">Dashboard de adherencia (7 días)</h2>
+  <div class="muted" style="font-size:12px;">Ordenado por vencidas y adherencia</div>
+</div>
+
+<div class="card table-card">
+    <table class="table-clean row-hover">
+        <thead>
+            <tr>
+                <th>Paciente</th>
+                <th>Vencidas</th>
+                <th>% Adherencia</th>
+                <th>Tomadas</th>
+                <th>Omitidas</th>
+                <th>Caídas 90d</th>
+            </tr>
+        </thead>
+        <tbody>
         {% for row in rows %}
         <tr>
-            <td><a href="{{ url_for('patient_detail', patient_id=row.patient.id) }}">{{ row.patient.name }}</a></td>
-            <td>{{ row.overdue }}</td>
-            <td>{% if row.adherence_percent is not none %}{{ row.adherence_percent }}%{% else %}—{% endif %}</td>
-            <td>{{ row.taken }}</td>
-            <td>{{ row.skipped }}</td>
-            <td>{{ row.falls }}</td>
+            <td><a href="{{ url_for('patient_detail', patient_id=row.patient.id) }}" class="link-plain" style="font-weight:700; color:var(--text);">{{ row.patient.name }}</a></td>
+            <td><span class="pill-mini pill-warn">{{ row.overdue }}</span></td>
+            <td>
+                {% if row.adherence_percent is not none %}
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <strong>{{ row.adherence_percent }}%</strong>
+                        <div class="progress" style="max-width:140px;"><div class="progress-fill" style="width:{{ row.adherence_percent }}%;"></div></div>
+                    </div>
+                {% else %}
+                    —
+                {% endif %}
+            </td>
+            <td><span class="pill-mini pill-info">{{ row.taken }}</span></td>
+            <td><span class="pill-mini pill-gray">{{ row.skipped }}</span></td>
+            <td><span class="pill-mini pill-gray">{{ row.falls }}</span></td>
         </tr>
         {% else %}
         <tr><td colspan="6" class="muted">Sin datos.</td></tr>
         {% endfor %}
+        </tbody>
     </table>
 </div>
 {% endblock %}
